@@ -3,6 +3,7 @@ from pathlib import Path
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 
 db = SQLAlchemy()
 
@@ -39,6 +40,24 @@ def create_app(test_config=None):
         from app.models import AdminUser, Machine, RentalJourney, SiteSetting
 
         db.create_all()
+        booking_columns = {
+            column["name"] for column in db.inspect(db.engine).get_columns("booking")
+        }
+        new_booking_columns = {
+            "delivery_address": "VARCHAR(300) NOT NULL DEFAULT ''",
+            "distance_km": "FLOAT NOT NULL DEFAULT 0",
+            "delivery_fee": "INTEGER NOT NULL DEFAULT 0",
+            "with_operator": "BOOLEAN NOT NULL DEFAULT FALSE",
+            "operator_fee": "INTEGER NOT NULL DEFAULT 0",
+            "subtotal": "INTEGER NOT NULL DEFAULT 0",
+            "total_price": "INTEGER NOT NULL DEFAULT 0",
+        }
+        with db.engine.begin() as connection:
+            for column_name, column_type in new_booking_columns.items():
+                if column_name not in booking_columns:
+                    connection.execute(
+                        text(f"ALTER TABLE booking ADD COLUMN {column_name} {column_type}")
+                    )
         admin = AdminUser.query.filter_by(username=app.config["ADMIN_USERNAME"]).first()
         if not admin:
             admin = AdminUser.query.order_by(AdminUser.id).first()
@@ -60,10 +79,14 @@ def create_app(test_config=None):
             "hero_subtitle": "Aparatología estética premium, en el momento que tu negocio la necesita.",
             "hero_images": "",
             "whatsapp_number": app.config["WHATSAPP_NUMBER"],
-            "whatsapp_template": "Hola, quiero consultar por mi reserva:\n\nEquipo: {machine}\nJornada: {journey}\nFecha: {date}\nHorario: {time}\nNombre: {name}\nTeléfono: {phone}",
+            "whatsapp_template": "Hola, quiero consultar por mi reserva:\n\nEquipo: {machine}\nJornada: {journey}\nFecha: {date}\nHorario: {time}\nNombre: {name}\nTeléfono: {phone}\nDirección: {address}\nRecorrido: {distance}\n\nSubtotal: {subtotal}\nEnvío: {shipping}\nOperadora: {operator}\nTotal: {total}",
             "opening_hour": "9",
             "closing_hour": "20",
             "slot_interval": "30",
+            "shipping_origin": "Pilar Centro, Pilar, Buenos Aires, Argentina",
+            "shipping_free_km": "10",
+            "shipping_per_km": "1000",
+            "operator_price": "0",
         }
         defaults.update({key: value for key, (_, value) in PUBLIC_TEXT_FIELDS.items()})
         for key, value in defaults.items():
