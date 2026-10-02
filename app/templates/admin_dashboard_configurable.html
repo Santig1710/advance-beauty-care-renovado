@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Administración | Advance Beauty Care{% endblock %}
+{% block body %}
+<header class="border-b border-line bg-white">
+  <div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 md:px-10">
+    <a href="/" class="text-[10px] font-semibold uppercase tracking-[.22em]">Advance <span class="font-normal">Beauty Care</span><span class="ml-3 text-stone-400">/ Administración</span></a>
+    <form method="post" action="{{ url_for('main.admin_logout') }}"><button class="text-xs text-stone-500 hover:text-ink">Cerrar sesión</button></form>
+  </div>
+</header>
+<main class="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14">
+  <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+    <div><p class="text-[10px] font-semibold uppercase tracking-[.2em] text-rose">Centro de control</p><h1 class="display mt-2 text-4xl">Buen día.</h1><p class="mt-2 text-sm text-stone-500">{{ machines|length }} equipos · {{ bookings|length }} reservas registradas</p></div>
+    <div class="flex gap-2"><a href="{{ url_for('main.edit_content') }}" class="border border-line bg-white px-4 py-3 text-xs hover:border-rose">Personalizar sitio</a><a href="{{ url_for('main.edit_machine') }}" class="bg-ink px-4 py-3 text-xs text-white hover:bg-rose">+ Nuevo equipo</a></div>
+  </div>
+  <section class="mt-10">
+    <div class="flex items-center justify-between border-b border-line pb-4"><h2 class="display text-2xl">Equipos</h2><span class="text-[10px] uppercase tracking-[.15em] text-stone-400">Catálogo público</span></div>
+    <div class="mt-3 divide-y divide-line">
+      {% for machine in machines %}
+      <div class="flex flex-wrap items-center gap-4 py-4">
+        <img src="{{ machine.image_url }}" alt="" class="h-14 w-16 object-cover">
+        <div class="min-w-[180px] flex-1">
+          <div class="text-sm font-medium">{{ machine.name }} <span class="ml-2 text-[10px] font-normal uppercase tracking-wider text-stone-400">{{ machine.category }}</span></div>
+          <div class="mt-2 flex flex-wrap gap-2">{% for journey in machine.journeys %}<span class="border border-line bg-white px-2.5 py-1.5 text-[10px] text-stone-600">{{ journey.name }} · {{ journey.duration_hours }} h · ${{ '{:,}'.format(journey.price).replace(',', '.') }}</span>{% else %}<span class="text-xs text-stone-400">Sin jornadas configuradas</span>{% endfor %}</div>
+        </div>
+        <span class="text-[10px] uppercase tracking-wider {{ 'text-emerald-700' if machine.active else 'text-stone-400' }}">{{ 'Activo' if machine.active else 'Archivado' }}</span>
+        <a href="{{ url_for('main.edit_machine', machine_id=machine.id) }}" class="border border-line px-3 py-2 text-xs hover:border-rose">Editar</a>
+        <form method="post" action="{{ url_for('main.delete_machine', machine_id=machine.id) }}" onsubmit="return confirm('¿Eliminar o archivar este equipo?')"><button class="px-2 py-2 text-xs text-stone-400 hover:text-red-700">Eliminar</button></form>
+      </div>
+      {% else %}<p class="py-6 text-sm text-stone-500">Todavía no hay equipos cargados.</p>{% endfor %}
+    </div>
+  </section>
+  <section id="reservas" class="mt-14 scroll-mt-8">
+    <div class="flex items-center justify-between border-b border-line pb-4"><h2 class="display text-2xl">Reservas</h2><span class="text-[10px] uppercase tracking-[.15em] text-stone-400">Agenda completa</span></div>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full min-w-[820px] text-left">
+        <thead><tr class="border-b border-line text-[10px] uppercase tracking-[.12em] text-stone-400"><th class="py-3 pr-4 font-medium">Fecha y hora</th><th class="py-3 pr-4 font-medium">Cliente</th><th class="py-3 pr-4 font-medium">Equipo / Jornada</th><th class="py-3 pr-4 font-medium">Importe</th><th class="py-3 pr-4 font-medium">Estado</th><th class="py-3 font-medium">Actualizar</th></tr></thead>
+        <tbody>
+          {% for booking in bookings %}
+          <tr class="border-b border-line align-top text-xs">
+            <td class="py-4 pr-4">{{ booking.start_at.strftime('%d/%m/%Y · %H:%M') }}<div class="mt-1 text-[10px] text-stone-400">{{ booking.duration_hours }} horas</div></td>
+            <td class="py-4 pr-4"><span class="font-medium">{{ booking.customer_name }}</span><div class="mt-1 text-stone-500">{{ booking.customer_phone }}</div><div class="text-stone-500">{{ booking.customer_email }}</div>{% if booking.business_name %}<div class="mt-1 text-stone-400">{{ booking.business_name }}</div>{% endif %}{% if booking.notes %}<div class="mt-1 max-w-48 text-stone-400">{{ booking.notes }}</div>{% endif %}</td>
+            <td class="py-4 pr-4">{{ booking.machine.name }}<div class="mt-1 text-stone-500">{{ booking.journey_type }}</div></td>
+            <td class="py-4 pr-4">${{ '{:,}'.format(booking.price).replace(',', '.') }}</td><td class="py-4 pr-4">{{ booking.status }}</td>
+            <td class="py-4"><form method="post" action="{{ url_for('main.update_booking_status', booking_id=booking.id) }}" class="flex gap-1"><select name="status" class="border border-line bg-white px-2 py-2 text-[10px]"><option {{ 'selected' if booking.status == 'Pendiente' }}>Pendiente</option><option {{ 'selected' if booking.status == 'Confirmada' }}>Confirmada</option><option {{ 'selected' if booking.status == 'Cancelada' }}>Cancelada</option></select><button class="bg-ink px-3 py-2 text-[10px] text-white">Guardar</button></form></td>
+          </tr>
+          {% else %}<tr><td colspan="6" class="py-10 text-center text-sm text-stone-500">Todavía no hay reservas.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+{% endblock %}

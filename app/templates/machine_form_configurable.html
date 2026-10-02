@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if machine.id else 'Nuevo' }} equipo | Advance Beauty Care{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-3xl px-5 py-10 md:py-14">
+  <a href="{{ url_for('main.admin_dashboard') }}" class="text-xs text-stone-500 hover:text-ink">← Volver al panel</a>
+  <h1 class="display mt-5 text-4xl">{{ 'Editar equipo' if machine.id else 'Nuevo equipo' }}</h1>
+  <form method="post" class="mt-8 grid gap-5 bg-white p-6 sm:grid-cols-2 sm:p-8">
+    <label class="text-xs text-stone-600">Nombre<input name="name" required value="{{ machine.name or '' }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label>
+    <label class="text-xs text-stone-600">Categoría<input name="category" required value="{{ machine.category or '' }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label>
+    <label class="text-xs text-stone-600 sm:col-span-2">URL de imagen<input name="image_url" type="url" value="{{ machine.image_url or '' }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"><span class="mt-1 block text-[10px] text-stone-400">Usá una URL pública https:// para la imagen del equipo.</span></label>
+    <label class="text-xs text-stone-600 sm:col-span-2">Descripción<textarea name="description" rows="3" class="mt-2 w-full border border-line px-4 py-3 text-sm">{{ machine.description or '' }}</textarea></label>
+    <section class="border-t border-line pt-5 sm:col-span-2">
+      <div class="flex flex-wrap items-end justify-between gap-3"><div><h2 class="display text-xl">Jornadas de alquiler</h2><p class="mt-1 text-xs text-stone-500">Definí nombre, duración y precio para cada opción.</p></div><button id="add-journey" type="button" class="border border-line px-4 py-3 text-xs hover:border-rose">+ Agregar jornada</button></div>
+      <div id="journey-list" class="mt-4 space-y-3">
+        {% for journey_name, duration_hours, price in journey_rows %}
+        <div class="journey-row grid items-end gap-3 border border-line bg-paper p-4 sm:grid-cols-[1.2fr_.7fr_.8fr_auto]">
+          <label class="text-xs text-stone-600">Nombre<input name="journey_name" required value="{{ journey_name }}" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></label>
+          <label class="text-xs text-stone-600">Horas<input name="journey_hours" type="number" step="0.5" min="0.5" required value="{{ duration_hours }}" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></label>
+          <label class="text-xs text-stone-600">Precio<input name="journey_price" type="number" min="0" required value="{{ price }}" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></label>
+          <button type="button" class="remove-journey border border-line px-3 py-3 text-xs text-stone-500 hover:border-red-300 hover:text-red-700" aria-label="Quitar jornada">Quitar</button>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    <label class="flex items-center gap-3 text-xs text-stone-600 sm:col-span-2"><input name="active" type="checkbox" class="accent-rose" {{ 'checked' if machine.active or not machine.id }}> Visible en el catálogo</label>
+    <div class="flex gap-3 sm:col-span-2"><button class="bg-ink px-6 py-4 text-xs text-white hover:bg-rose">Guardar equipo</button><a href="{{ url_for('main.admin_dashboard') }}" class="border border-line px-6 py-4 text-xs">Cancelar</a></div>
+  </form>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+  const list = document.querySelector('#journey-list');
+  function updateRemoveButtons() {
+    const buttons = [...list.querySelectorAll('.remove-journey')];
+    buttons.forEach(button => { button.disabled = buttons.length === 1; });
+  }
+  document.querySelector('#add-journey').addEventListener('click', () => {
+    const row = document.createElement('div');
+    row.className = 'journey-row grid items-end gap-3 border border-line bg-paper p-4 sm:grid-cols-[1.2fr_.7fr_.8fr_auto]';
+    row.innerHTML = '<label class="text-xs text-stone-600">Nombre<input name="journey_name" required class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></label><label class="text-xs text-stone-600">Horas<input name="journey_hours" type="number" step="0.5" min="0.5" required value="4" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></label><label class="text-xs text-stone-600">Precio<input name="journey_price" type="number" min="0" required value="0" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></label><button type="button" class="remove-journey border border-line px-3 py-3 text-xs text-stone-500 hover:border-red-300 hover:text-red-700" aria-label="Quitar jornada">Quitar</button>';
+    list.append(row);
+    updateRemoveButtons();
+  });
+  list.addEventListener('click', event => {
+    const button = event.target.closest('.remove-journey');
+    if (button && !button.disabled) { button.closest('.journey-row').remove(); updateRemoveButtons(); }
+  });
+  updateRemoveButtons();
+</script>
+{% endblock %}

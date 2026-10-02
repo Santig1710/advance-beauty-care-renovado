@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fbf8f7">
+  <title>{% block title %}Advance Beauty Care{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { colors: { ink: '#282522', rose: '#c98785', blush: '#f4e8e6', paper: '#fbf8f7', line: '#e9e3e0' }, fontFamily: { sans: ['DM Sans', 'sans-serif'], display: ['Playfair Display', 'serif'] } } } }
+  </script>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: 'DM Sans', sans-serif; color: #282522; background: #fbf8f7; }
+    .display { font-family: 'Playfair Display', serif; }
+    .fade-up { animation: rise .6s both; }
+    @keyframes rise { from { opacity:  0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .hero-slide { transition: opacity .8s ease; }
+    input, textarea, select { outline: none; }
+    input:focus, textarea:focus, select:focus { border-color: #c98785 !important; box-shadow: 0 0 0 3px rgba(201,135,133,.12); }
+  </style>
+</head>
+<body class="min-h-screen">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div class="fixed right-4 top-4 z-[80] space-y-2">{% for category, message in messages %}<div class="rounded-md border border-line bg-white px-5 py-3 text-sm shadow-lg">{{ message }}</div>{% endfor %}</div>{% endif %}
+  {% endwith %}
+  {% block body %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>
