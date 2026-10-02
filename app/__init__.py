@@ -20,6 +20,8 @@ def create_app(test_config=None):
         SECRET_KEY=os.environ.get("SECRET_KEY", "local-development-key-change-before-deploy"),
         SQLALCHEMY_DATABASE_URI=db_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        MAX_CONTENT_LENGTH=32 * 1024 * 1024,
+        UPLOAD_FOLDER=str(Path(app.static_folder) / "uploads"),
         ADMIN_USERNAME=os.environ.get("ADMIN_USERNAME", "Aniadv"),
         ADMIN_PASSWORD=os.environ.get("ADMIN_PASSWORD", "Sofia2004"),
         WHATSAPP_NUMBER=os.environ.get("WHATSAPP_NUMBER", ""),
@@ -29,7 +31,7 @@ def create_app(test_config=None):
 
     db.init_app(app)
 
-    from app.routes import bp
+    from app.routes import PUBLIC_TEXT_FIELDS, bp
 
     app.register_blueprint(bp)
 
@@ -56,12 +58,14 @@ def create_app(test_config=None):
         defaults = {
             "hero_title": "Tecnología que transforma.",
             "hero_subtitle": "Aparatología estética premium, en el momento que tu negocio la necesita.",
-            "hero_images": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1800&q=85\nhttps://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=1800&q=85\nhttps://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1800&q=85",
+            "hero_images": "",
             "whatsapp_number": app.config["WHATSAPP_NUMBER"],
             "whatsapp_template": "Hola, quiero consultar por mi reserva:\n\nEquipo: {machine}\nJornada: {journey}\nFecha: {date}\nHorario: {time}\nNombre: {name}\nTeléfono: {phone}",
             "opening_hour": "9",
             "closing_hour": "20",
+            "slot_interval": "30",
         }
+        defaults.update({key: value for key, (_, value) in PUBLIC_TEXT_FIELDS.items()})
         for key, value in defaults.items():
             if not SiteSetting.query.filter_by(key=key).first():
                 db.session.add(SiteSetting(key=key, value=value))
@@ -72,7 +76,7 @@ def create_app(test_config=None):
                         name="Indiba",
                         category="Radiofrecuencia",
                         description="Tecnología de radiofrecuencia para tratamientos faciales y corporales.",
-                        image_url="https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=1000&q=85",
+                        image_url="",
                         half_day_price=85000,
                         full_day_price=145000,
                         half_day_hours=4,
@@ -82,7 +86,7 @@ def create_app(test_config=None):
                         name="HIFU",
                         category="Ultrasonido focalizado",
                         description="Ultrasonido focalizado de alta intensidad para protocolos avanzados.",
-                        image_url="https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1000&q=85",
+                        image_url="",
                         half_day_price=110000,
                         full_day_price=185000,
                         half_day_hours=4,

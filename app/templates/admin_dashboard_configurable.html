@@ -17,7 +17,7 @@
     <div class="mt-3 divide-y divide-line">
       {% for machine in machines %}
       <div class="flex flex-wrap items-center gap-4 py-4">
-        <img src="{{ machine.image_url }}" alt="" class="h-14 w-16 object-cover">
+        {% if machine_images.get(machine.id) %}<img src="{{ machine_images.get(machine.id) }}" alt="" class="h-14 w-16 object-cover">{% else %}<div class="h-14 w-16 bg-blush"></div>{% endif %}
         <div class="min-w-[180px] flex-1">
           <div class="text-sm font-medium">{{ machine.name }} <span class="ml-2 text-[10px] font-normal uppercase tracking-wider text-stone-400">{{ machine.category }}</span></div>
           <div class="mt-2 flex flex-wrap gap-2">{% for journey in machine.journeys %}<span class="border border-line bg-white px-2.5 py-1.5 text-[10px] text-stone-600">{{ journey.name }} · {{ journey.duration_hours }} h · ${{ '{:,}'.format(journey.price).replace(',', '.') }}</span>{% else %}<span class="text-xs text-stone-400">Sin jornadas configuradas</span>{% endfor %}</div>

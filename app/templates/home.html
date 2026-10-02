@@ -1,59 +1,64 @@
 {% extends 'base.html' %}
-{% block title %}Alquiler de aparatología premium | Advance Beauty Care{% endblock %}
+{% block title %}{{ site.get('text_page_title', 'Alquiler de aparatología premium | Advance Beauty Care') }}{% endblock %}
 {% block body %}
 <header class="absolute inset-x-0 top-0 z-20 border-b border-white/30 text-white">
   <div class="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 md:px-10">
-    <a href="/" class="text-[11px] font-semibold uppercase tracking-[.23em]">Advance <span class="font-normal">Beauty Care</span></a>
-    <nav class="flex items-center gap-7 text-xs"><a class="hidden transition hover:text-blush sm:block" href="#equipos">Equipos</a><a href="#equipos" class="border-b border-white/70 pb-1">Reservar</a></nav>
+    <a href="/" class="text-[11px] font-semibold uppercase tracking-[.23em]">{{ site.get('text_brand', 'Advance Beauty Care') }}</a>
+    <nav class="flex items-center gap-7 text-xs"><a class="hidden transition hover:text-blush sm:block" href="#equipos">{{ site.get('text_nav_catalog', 'Equipos') }}</a><a href="#equipos" class="border-b border-white/70 pb-1">{{ site.get('text_nav_reserve', 'Reservar') }}</a></nav>
   </div>
 </header>
 <main>
   <section class="relative flex min-h-[590px] items-end overflow-hidden bg-[#6f5e59] md:min-h-[690px]">
-    {% set hero_images = (site.get('hero_images', '') or '').splitlines() %}
     {% for image in hero_images %}<div class="hero-slide absolute inset-0 {{ 'opacity-100' if loop.first else 'opacity-0' }}" style="background-image:linear-gradient(90deg,rgba(30,25,24,.58),rgba(30,25,24,.08)),url('{{ image }}');background-position:center 48%;background-size:cover"></div>{% endfor %}
     <div class="relative z-10 mx-auto w-full max-w-7xl px-5 pb-20 pt-36 text-white md:px-10 md:pb-28">
-      <p class="mb-5 text-[10px] font-semibold uppercase tracking-[.27em] text-white/75">Tecnología estética · Alquiler profesional</p>
+      <p class="mb-5 text-[10px] font-semibold uppercase tracking-[.27em] text-white/75">{{ site.get('text_hero_kicker', 'Tecnología estética · Alquiler profesional') }}</p>
       <h1 class="display max-w-2xl text-5xl leading-[1.08] md:text-7xl">{{ site.get('hero_title', 'Tecnología que transforma.') }}</h1>
       <p class="mt-6 max-w-md text-sm leading-7 text-white/85 md:text-base">{{ site.get('hero_subtitle', '') }}</p>
-      <a href="#equipos" class="mt-9 inline-flex items-center gap-8 border border-white/70 px-5 py-3 text-xs transition hover:bg-white hover:text-ink">Explorar equipos <span aria-hidden="true">↘</span></a>
+      <a href="#equipos" class="mt-9 inline-flex items-center gap-8 border border-white/70 px-5 py-3 text-xs transition hover:bg-white hover:text-ink">{{ site.get('text_hero_cta', 'Explorar equipos') }} <span aria-hidden="true">↘</span></a>
     </div>
-    <div class="absolute bottom-8 right-6 z-10 flex gap-2 md:right-10">{% for image in hero_images %}<button class="hero-dot h-1 w-8 bg-white/45 transition" aria-label="Mostrar imagen {{ loop.index }}"></button>{% endfor %}</div>
+    {% if hero_images|length > 1 %}<div class="absolute bottom-8 right-6 z-10 flex gap-2 md:right-10">{% for image in hero_images %}<button class="hero-dot h-1 w-8 bg-white/45 transition" aria-label="{{ site.get('text_slider_label', 'Mostrar imagen') }} {{ loop.index }}"></button>{% endfor %}</div>{% endif %}
   </section>
 
   <section id="equipos" class="mx-auto max-w-7xl scroll-mt-8 px-5 py-20 md:px-10 md:py-28">
     <div class="flex flex-col justify-between gap-8 md:flex-row md:items-end">
-      <div class="fade-up"><p class="text-[10px] font-semibold uppercase tracking-[.25em] text-rose">Selección profesional</p><h2 class="display mt-3 text-4xl md:text-5xl">Equipos disponibles</h2><p class="mt-4 max-w-lg text-sm leading-6 text-stone-500">Elegí tu tecnología y armá una reserva en pocos pasos.</p></div>
-      <label class="flex w-full max-w-sm items-center gap-3 border-b border-stone-300 pb-3 text-stone-400"><span aria-hidden="true">⌕</span><input id="machine-search" class="w-full bg-transparent text-sm text-ink placeholder:text-stone-400" placeholder="Buscar por equipo o tratamiento" aria-label="Buscar equipos"></label>
+      <div class="fade-up"><p class="text-[10px] font-semibold uppercase tracking-[.25em] text-rose">{{ site.get('text_catalog_eyebrow', 'Selección profesional') }}</p><h2 class="display mt-3 text-4xl md:text-5xl">{{ site.get('text_catalog_title', 'Equipos disponibles') }}</h2><p class="mt-4 max-w-lg text-sm leading-6 text-stone-500">{{ site.get('text_catalog_copy', 'Elegí tu tecnología y armá una reserva en pocos pasos.') }}</p></div>
+      <label class="flex w-full max-w-sm items-center gap-3 border-b border-stone-300 pb-3 text-stone-400"><span aria-hidden="true">⌕</span><input id="machine-search" class="w-full bg-transparent text-sm text-ink placeholder:text-stone-400" placeholder="{{ site.get('text_search_placeholder', 'Buscar por equipo o tratamiento') }}" aria-label="{{ site.get('text_search_aria', 'Buscar equipos') }}"></label>
     </div>
-    <div class="mt-8 flex flex-wrap gap-2" id="filters"><button class="filter-chip border border-ink bg-ink px-4 py-2 text-[11px] text-white" data-filter="all">Todos</button>{% for category in machines|map(attribute='category')|unique %}<button class="filter-chip border border-line bg-white px-4 py-2 text-[11px] text-stone-600 transition hover:border-rose" data-filter="{{ category|lower }}">{{ category }}</button>{% endfor %}</div>
+    <div class="mt-8 flex flex-wrap gap-2" id="filters"><button class="filter-chip border border-ink bg-ink px-4 py-2 text-[11px] text-white" data-filter="all">{{ site.get('text_filter_all', 'Todos') }}</button>{% for category in machines|map(attribute='category')|unique %}<button class="filter-chip border border-line bg-white px-4 py-2 text-[11px] text-stone-600 transition hover:border-rose" data-filter="{{ category|lower }}">{{ category }}</button>{% endfor %}</div>
     <div id="machine-grid" class="mt-8 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
       {% for machine in machines %}
       <article class="machine-card group fade-up" data-name="{{ (machine.name ~ ' ' ~ machine.category ~ ' ' ~ machine.description)|lower }}" data-category="{{ machine.category|lower }}" style="animation-delay:{{ loop.index0 * 70 }}ms">
-        <div class="relative aspect-[4/3] overflow-hidden bg-blush"><img src="{{ machine.image_url }}" alt="{{ machine.name }}" class="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]" loading="lazy"><span class="absolute left-4 top-4 bg-white/90 px-3 py-1.5 text-[9px] uppercase tracking-[.16em]">{{ machine.category }}</span></div>
-        <div class="flex items-start justify-between gap-4 pt-5"><div><h3 class="display text-2xl">{{ machine.name }}</h3><p class="mt-2 max-w-sm text-xs leading-5 text-stone-500">{{ machine.description }}</p></div><span class="mt-1 text-[10px] uppercase tracking-[.12em] text-stone-400">Premium</span></div>
-        <div class="mt-5 flex items-end justify-between border-t border-line pt-4">{% if machine.journeys %}{% set cheapest_journey = machine.journeys|min(attribute='price') %}<p class="text-xs text-stone-500">Desde <span class="font-semibold text-ink">${{ '{:,}'.format(cheapest_journey.price).replace(',', '.') }}</span></p>{% else %}<p class="text-xs text-stone-500">Consultar disponibilidad</p>{% endif %}<button type="button" class="open-booking inline-flex items-center gap-3 bg-ink px-4 py-3 text-[11px] text-white transition hover:bg-rose disabled:cursor-not-allowed disabled:opacity-50" data-id="{{ machine.id }}" data-name="{{ machine.name }}" data-journeys='[{% for journey in machine.journeys %}{"id":{{ journey.id }},"name":{{ journey.name|tojson }},"hours":{{ journey.duration_hours }},"price":{{ journey.price }}}{% if not loop.last %},{% endif %}{% endfor %}]' {% if not machine.journeys %}disabled title="Este equipo no tiene jornadas configuradas"{% endif %}>Elegir <span aria-hidden="true">→</span></button></div>
+        <div class="relative aspect-[4/3] overflow-hidden bg-blush">{% if machine_images.get(machine.id) %}<img src="{{ machine_images.get(machine.id) }}" alt="{{ machine.name }}" class="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]" loading="lazy">{% endif %}<span class="absolute left-4 top-4 bg-white/90 px-3 py-1.5 text-[9px] uppercase tracking-[.16em]">{{ machine.category }}</span></div>
+        <div class="flex items-start justify-between gap-4 pt-5"><div><h3 class="display text-2xl">{{ machine.name }}</h3><p class="mt-2 max-w-sm text-xs leading-5 text-stone-500">{{ machine.description }}</p></div><span class="mt-1 text-[10px] uppercase tracking-[.12em] text-stone-400">{{ site.get('text_product_badge', 'Premium') }}</span></div>
+        <div class="mt-5 flex items-end justify-between border-t border-line pt-4">{% if machine.journeys %}{% set cheapest_journey = machine.journeys|min(attribute='price') %}<p class="text-xs text-stone-500">{{ site.get('text_price_from', 'Desde') }} <span class="font-semibold text-ink">${{ '{:,}'.format(cheapest_journey.price).replace(',', '.') }}</span></p>{% else %}<p class="text-xs text-stone-500">{{ site.get('text_availability_consult', 'Consultar disponibilidad') }}</p>{% endif %}<button type="button" class="open-booking inline-flex items-center gap-3 bg-ink px-4 py-3 text-[11px] text-white transition hover:bg-rose disabled:cursor-not-allowed disabled:opacity-50" data-id="{{ machine.id }}" data-name="{{ machine.name }}" data-journeys='[{% for journey in machine.journeys %}{"id":{{ journey.id }},"name":{{ journey.name|tojson }},"hours":{{ journey.duration_hours }},"price":{{ journey.price }}}{% if not loop.last %},{% endif %}{% endfor %}]' {% if not machine.journeys %}disabled title="{{ site.get('text_no_journeys', 'Este equipo no tiene jornadas configuradas') }}"{% endif %}>{{ site.get('text_choose_equipment', 'Elegir') }} <span aria-hidden="true">→</span></button></div>
       </article>
-      {% else %}<p class="col-span-full py-10 text-sm text-stone-500">Pronto vas a encontrar nuevos equipos disponibles.</p>{% endfor %}
+      {% else %}<p class="col-span-full py-10 text-sm text-stone-500">{{ site.get('text_no_equipment', 'Pronto vas a encontrar nuevos equipos disponibles.') }}</p>{% endfor %}
     </div>
-    <p id="empty-search" class="hidden py-12 text-center text-sm text-stone-500">No encontramos equipos con esa búsqueda.</p>
+    <p id="empty-search" class="hidden py-12 text-center text-sm text-stone-500">{{ site.get('text_no_search_result', 'No encontramos equipos con esa búsqueda.') }}</p>
   </section>
+
   <section class="border-y border-line bg-[#f5eeeb]">
-    <div class="mx-auto grid max-w-7xl gap-8 px-5 py-12 text-center sm:grid-cols-3 md:px-10 md:py-16">{% for number, title, copy in [('01','Elegí','Tecnología para cada protocolo'),('02','Reservá','Turno confirmado sin llamadas'),('03','Potenciá','Tu práctica profesional')] %}<div><span class="display text-sm text-rose">{{ number }}</span><h3 class="display mt-2 text-2xl">{{ title }}</h3><p class="mt-2 text-xs text-stone-500">{{ copy }}</p></div>{% endfor %}</div>
+    <div class="mx-auto grid max-w-7xl gap-8 px-5 py-12 text-center sm:grid-cols-3 md:px-10 md:py-16">
+      {% for number, title, copy in [('01', site.get('text_feature_1_title', 'Elegí'), site.get('text_feature_1_copy', 'Tecnología para cada protocolo')), ('02', site.get('text_feature_2_title', 'Reservá'), site.get('text_feature_2_copy', 'Turno confirmado sin llamadas')), ('03', site.get('text_feature_3_title', 'Potenciá'), site.get('text_feature_3_copy', 'Tu práctica profesional'))] %}<div><span class="display text-sm text-rose">{{ number }}</span><h3 class="display mt-2 text-2xl">{{ title }}</h3><p class="mt-2 text-xs text-stone-500">{{ copy }}</p></div>{% endfor %}
+    </div>
   </section>
+  {% for section in custom_sections %}
+  {% if section.get('title') or section.get('body') %}<section class="border-b border-line"><div class="mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16">{% if section.get('title') %}<h2 class="display text-3xl">{{ section.get('title') }}</h2>{% endif %}{% if section.get('body') %}<p class="mt-3 max-w-2xl whitespace-pre-line text-sm leading-7 text-stone-600">{{ section.get('body') }}</p>{% endif %}</div></section>{% endif %}
+  {% endfor %}
 </main>
-<footer class="mx-auto flex max-w-7xl flex-col justify-between gap-3 px-5 py-8 text-[10px] uppercase tracking-[.14em] text-stone-400 sm:flex-row md:px-10"><span>Advance Beauty Care</span><span>Aparatología estética de alta gama</span></footer>
+<footer class="mx-auto flex max-w-7xl flex-col justify-between gap-3 px-5 py-8 text-[10px] uppercase tracking-[.14em] text-stone-400 sm:flex-row md:px-10"><span>{{ site.get('text_brand', 'Advance Beauty Care') }}</span><span>{{ site.get('text_footer_copy', 'Aparatología estética de alta gama') }}</span></footer>
 
 <div id="booking-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-ink/55 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="booking-title">
   <div class="relative max-h-[94vh] w-full max-w-2xl overflow-y-auto bg-paper p-6 shadow-2xl sm:p-10">
-    <button id="close-booking" class="absolute right-5 top-5 p-2 text-xl text-stone-500 hover:text-ink" aria-label="Cerrar reserva">×</button>
-    <p class="text-[10px] font-semibold uppercase tracking-[.22em] text-rose">Tu reserva · <span id="selected-machine-label"></span></p>
-    <h2 id="booking-title" class="display mt-3 text-3xl">Un paso más cerca</h2>
-    <div class="mt-6 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-[.1em] text-stone-400"><div class="booking-progress text-rose">01 <span class="hidden sm:inline">Jornada</span></div><div class="booking-progress">02 <span class="hidden sm:inline">Turno</span></div><div class="booking-progress">03 <span class="hidden sm:inline">Tus datos</span></div></div>
+    <button id="close-booking" class="absolute right-5 top-5 p-2 text-xl text-stone-500 hover:text-ink" aria-label="{{ site.get('text_close_booking', 'Cerrar reserva') }}">×</button>
+    <p class="text-[10px] font-semibold uppercase tracking-[.22em] text-rose">{{ site.get('text_booking_badge', 'Tu reserva') }} · <span id="selected-machine-label"></span></p>
+    <h2 id="booking-title" class="display mt-3 text-3xl">{{ site.get('text_booking_title', 'Un paso más cerca') }}</h2>
+    <div class="mt-6 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-[.1em] text-stone-400"><div class="booking-progress text-rose">01 <span class="hidden sm:inline">{{ site.get('text_progress_1', 'Jornada') }}</span></div><div class="booking-progress">02 <span class="hidden sm:inline">{{ site.get('text_progress_2', 'Turno') }}</span></div><div class="booking-progress">03 <span class="hidden sm:inline">{{ site.get('text_progress_3', 'Tus datos') }}</span></div></div>
     <form id="booking-form" action="{{ url_for('main.create_booking') }}" method="post" class="mt-7">
       <input type="hidden" name="machine_id" id="booking-machine-id"><input type="hidden" name="journey_id" id="booking-journey-id"><input type="hidden" name="date" id="booking-date"><input type="hidden" name="time" id="booking-time">
-      <section class="booking-step" data-step="0"><h3 class="display text-xl">¿Qué jornada necesitás?</h3><p class="mt-1 text-xs text-stone-500">Seleccioná la duración que mejor se adapta a tu agenda.</p><div id="journey-options" class="mt-6 grid gap-3 sm:grid-cols-2"></div><button type="button" class="next-step mt-7 w-full bg-ink px-5 py-4 text-xs text-white transition hover:bg-rose" disabled>Elegí una jornada para continuar</button></section>
-      <section class="booking-step hidden" data-step="1"><h3 class="display text-xl">Elegí fecha y horario</h3><p class="mt-1 text-xs text-stone-500">Los turnos se actualizan según la disponibilidad real.</p><label class="mt-6 block text-xs text-stone-600">Fecha<input type="date" id="date-picker" class="mt-2 block w-full border border-line bg-white px-4 py-3 text-sm"></label><div class="mt-6"><div class="flex items-center justify-between"><p class="text-xs text-stone-600">Horarios disponibles</p><span id="slot-loading" class="hidden text-[10px] text-stone-400">Consultando...</span></div><div id="slot-list" class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4"></div><p id="slot-empty" class="hidden mt-3 text-xs text-stone-500">No hay horarios libres para esta fecha. Probá otra.</p></div><div class="mt-7 flex gap-3"><button type="button" class="back-step border border-line px-5 py-4 text-xs">Atrás</button><button type="button" class="next-step flex-1 bg-ink px-5 py-4 text-xs text-white transition hover:bg-rose" disabled>Continuar</button></div></section>
-      <section class="booking-step hidden" data-step="2"><h3 class="display text-xl">Tus datos de contacto</h3><p class="mt-1 text-xs text-stone-500">Los usamos para preparar tu reserva y contactarte.</p><div class="mt-6 grid gap-4 sm:grid-cols-2"><label class="text-xs text-stone-600">Nombre y apellido<input name="customer_name" required autocomplete="name" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></label><label class="text-xs text-stone-600">Correo electrónico<input name="customer_email" type="email" required autocomplete="email" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></label><label class="text-xs text-stone-600">Teléfono / WhatsApp<input name="customer_phone" required autocomplete="tel" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></label><label class="text-xs text-stone-600">Nombre del centro <span class="text-stone-400">(opcional)</span><input name="business_name" autocomplete="organization" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></label><label class="text-xs text-stone-600 sm:col-span-2">Comentarios <span class="text-stone-400">(opcional)</span><textarea name="notes" rows="2" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></textarea></label></div><div class="mt-5 bg-[#f5eeeb] p-4 text-xs leading-6 text-stone-600"><div id="booking-summary"></div><p class="mt-1">Al confirmar guardamos tu solicitud y abrimos WhatsApp con los detalles.</p></div><div class="mt-6 flex gap-3"><button type="button" class="back-step border border-line px-5 py-4 text-xs">Atrás</button><button type="submit" class="flex-1 bg-ink px-5 py-4 text-xs text-white transition hover:bg-rose">Confirmar por WhatsApp <span aria-hidden="true">→</span></button></div></section>
+      <section class="booking-step" data-step="0"><h3 class="display text-xl">{{ site.get('text_journey_title', '¿Qué jornada necesitás?') }}</h3><p class="mt-1 text-xs text-stone-500">{{ site.get('text_journey_copy', 'Seleccioná la duración que mejor se adapta a tu agenda.') }}</p><div id="journey-options" class="mt-6 grid gap-3 sm:grid-cols-2"></div><button type="button" class="next-step mt-7 w-full bg-ink px-5 py-4 text-xs text-white transition hover:bg-rose" disabled>{{ site.get('text_journey_continue', 'Elegí una jornada para continuar') }}</button></section>
+      <section class="booking-step hidden" data-step="1"><h3 class="display text-xl">{{ site.get('text_date_title', 'Elegí fecha y horario') }}</h3><p class="mt-1 text-xs text-stone-500">{{ site.get('text_date_copy', 'Los turnos se actualizan según la disponibilidad real.') }}</p><label class="mt-6 block text-xs text-stone-600">{{ site.get('text_date_label', 'Fecha') }}<input type="date" id="date-picker" class="mt-2 block w-full border border-line bg-white px-4 py-3 text-sm"></label><div class="mt-6"><div class="flex items-center justify-between"><p class="text-xs text-stone-600">{{ site.get('text_slot_label', 'Horarios disponibles') }}</p><span id="slot-loading" class="hidden text-[10px] text-stone-400">{{ site.get('text_slot_loading', 'Consultando...') }}</span></div><div id="slot-list" class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4"></div><p id="slot-empty" class="hidden mt-3 text-xs text-stone-500">{{ site.get('text_slot_empty', 'No hay horarios libres para esta fecha. Probá otra.') }}</p></div><div class="mt-7 flex gap-3"><button type="button" class="back-step border border-line px-5 py-4 text-xs">{{ site.get('text_back', 'Atrás') }}</button><button type="button" class="next-step flex-1 bg-ink px-5 py-4 text-xs text-white transition hover:bg-rose" disabled>{{ site.get('text_continue', 'Continuar') }}</button></div></section>
+      <section class="booking-step hidden" data-step="2"><h3 class="display text-xl">{{ site.get('text_contact_title', 'Tus datos de contacto') }}</h3><p class="mt-1 text-xs text-stone-500">{{ site.get('text_contact_copy', 'Los usamos para preparar tu reserva y contactarte.') }}</p><div class="mt-6 grid gap-4 sm:grid-cols-2"><label class="text-xs text-stone-600">{{ site.get('text_customer_name', 'Nombre y apellido') }}<input name="customer_name" required autocomplete="name" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></label><label class="text-xs text-stone-600">{{ site.get('text_customer_email', 'Correo electrónico') }}<input name="customer_email" type="email" required autocomplete="email" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></label><label class="text-xs text-stone-600">{{ site.get('text_customer_phone', 'Teléfono / WhatsApp') }}<input name="customer_phone" required autocomplete="tel" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></label><label class="text-xs text-stone-600">{{ site.get('text_business_name', 'Nombre del centro') }} <span class="text-stone-400">{{ site.get('text_optional', '(opcional)') }}</span><input name="business_name" autocomplete="organization" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></label><label class="text-xs text-stone-600 sm:col-span-2">{{ site.get('text_notes', 'Comentarios') }} <span class="text-stone-400">{{ site.get('text_optional', '(opcional)') }}</span><textarea name="notes" rows="2" class="mt-2 w-full border border-line bg-white px-4 py-3 text-sm"></textarea></label></div><div class="mt-5 bg-[#f5eeeb] p-4 text-xs leading-6 text-stone-600"><div id="booking-summary"></div><p class="mt-1">{{ site.get('text_booking_summary', 'Al confirmar guardamos tu solicitud y abrimos WhatsApp con los detalles.') }}</p></div><div class="mt-6 flex gap-3"><button type="button" class="back-step border border-line px-5 py-4 text-xs">{{ site.get('text_back', 'Atrás') }}</button><button type="submit" class="flex-1 bg-ink px-5 py-4 text-xs text-white transition hover:bg-rose">{{ site.get('text_confirm_booking', 'Confirmar por WhatsApp') }} <span aria-hidden="true">→</span></button></div></section>
     </form>
   </div>
 </div>
@@ -63,38 +68,144 @@
   const slides = [...document.querySelectorAll('.hero-slide')];
   const dots = [...document.querySelectorAll('.hero-dot')];
   let activeSlide = 0;
-  function showSlide(index) { slides.forEach((slide, i) => { slide.classList.toggle('opacity-100', i === index); slide.classList.toggle('opacity-0', i !== index); }); dots.forEach((dot, i) => dot.classList.toggle('bg-white', i === index)); activeSlide = index; }
+  function showSlide(index) {
+    slides.forEach((slide, i) => {
+      slide.classList.toggle('opacity-100', i === index);
+      slide.classList.toggle('opacity-0', i !== index);
+    });
+    dots.forEach((dot, i) => dot.classList.toggle('bg-white', i === index));
+    activeSlide = index;
+  }
   dots.forEach((dot, index) => dot.addEventListener('click', () => showSlide(index)));
   if (slides.length > 1) setInterval(() => showSlide((activeSlide + 1) % slides.length), 5500);
 
   const search = document.querySelector('#machine-search');
   let chosenCategory = 'all';
-  function filterMachines() { let visible = 0; document.querySelectorAll('.machine-card').forEach(card => { const match = card.dataset.name.includes(search.value.toLowerCase()) && (chosenCategory === 'all' || card.dataset.category === chosenCategory); card.classList.toggle('hidden', !match); visible += match ? 1 : 0; }); document.querySelector('#empty-search').classList.toggle('hidden', visible !== 0); }
+  function filterMachines() {
+    let visible = 0;
+    document.querySelectorAll('.machine-card').forEach(card => {
+      const match = card.dataset.name.includes(search.value.toLowerCase()) && (chosenCategory === 'all' || card.dataset.category === chosenCategory);
+      card.classList.toggle('hidden', !match);
+      visible += match ? 1 : 0;
+    });
+    document.querySelector('#empty-search').classList.toggle('hidden', visible !== 0);
+  }
   search.addEventListener('input', filterMachines);
-  document.querySelectorAll('.filter-chip').forEach(button => button.addEventListener('click', () => { chosenCategory = button.dataset.filter; document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('bg-ink', 'text-white')); button.classList.add('bg-ink', 'text-white'); filterMachines(); }));
+  document.querySelectorAll('.filter-chip').forEach(button => button.addEventListener('click', () => {
+    chosenCategory = button.dataset.filter;
+    document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('bg-ink', 'text-white'));
+    button.classList.add('bg-ink', 'text-white');
+    filterMachines();
+  }));
 
   const modal = document.querySelector('#booking-modal');
-  const form = document.querySelector('#booking-form');
-  let selectedMachine = null, selectedJourney = null, selectedSlot = null, currentStep = 0;
+  const bookingForm = document.querySelector('#booking-form');
+  let selectedMachine = null;
+  let selectedJourney = null;
+  let selectedSlot = null;
+  let currentStep = 0;
   const currency = value => '$' + Number(value).toLocaleString('es-AR');
-  function renderStep(step) { currentStep = step; document.querySelectorAll('.booking-step').forEach(section => section.classList.toggle('hidden', Number(section.dataset.step) !== step)); document.querySelectorAll('.booking-progress').forEach((item, index) => { item.classList.toggle('text-rose', index <= step); item.classList.toggle('font-semibold', index === step); }); }
-  document.querySelectorAll('.open-booking').forEach(button => button.addEventListener('click', () => { selectedMachine = { ...button.dataset, journeys: JSON.parse(button.dataset.journeys) }; selectedJourney = null; selectedSlot = null; document.querySelector('#selected-machine-label').textContent = selectedMachine.name; document.querySelector('#booking-machine-id').value = selectedMachine.id; document.querySelector('#journey-options').replaceChildren(); selectedMachine.journeys.forEach(journey => { const option = document.createElement('button'); option.type = 'button'; option.className = 'journey-option border border-line bg-white p-5 text-left transition hover:border-rose'; const name = document.createElement('span'); name.className = 'text-[10px] uppercase tracking-[.14em] text-stone-400'; name.textContent = journey.name; const hours = document.createElement('span'); hours.className = 'mt-3 block text-sm font-medium'; hours.textContent = `${journey.hours} horas de uso`; const price = document.createElement('span'); price.className = 'mt-2 block text-lg'; price.textContent = currency(journey.price); option.append(name, hours, price); option.addEventListener('click', () => { selectedJourney = journey; document.querySelector('#booking-journey-id').value = journey.id; document.querySelectorAll('.journey-option').forEach(item => item.classList.remove('border-rose', 'bg-blush')); option.classList.add('border-rose', 'bg-blush'); document.querySelector('.booking-step[data-step="0"] .next-step').disabled = false; document.querySelector('.booking-step[data-step="0"] .next-step').textContent = 'Continuar'; }); document.querySelector('#journey-options').append(option); }); document.querySelector('#booking-date').value = ''; document.querySelector('#booking-time').value = ''; document.querySelector('#date-picker').value = ''; const today = new Date(); document.querySelector('#date-picker').min = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; document.querySelector('#slot-list').replaceChildren(); document.querySelector('.booking-step[data-step="0"] .next-step').disabled = true; renderStep(0); modal.classList.remove('hidden'); modal.classList.add('flex'); document.body.classList.add('overflow-hidden'); }));
-  function closeModal() { modal.classList.add('hidden'); modal.classList.remove('flex'); document.body.classList.remove('overflow-hidden'); }
+  function renderStep(step) {
+    currentStep = step;
+    document.querySelectorAll('.booking-step').forEach(section => section.classList.toggle('hidden', Number(section.dataset.step) !== step));
+    document.querySelectorAll('.booking-progress').forEach((item, index) => {
+      item.classList.toggle('text-rose', index <= step);
+      item.classList.toggle('font-semibold', index === step);
+    });
+  }
+  document.querySelectorAll('.open-booking').forEach(button => button.addEventListener('click', () => {
+    selectedMachine = { ...button.dataset, journeys: JSON.parse(button.dataset.journeys) };
+    selectedJourney = null;
+    selectedSlot = null;
+    document.querySelector('#selected-machine-label').textContent = selectedMachine.name;
+    document.querySelector('#booking-machine-id').value = selectedMachine.id;
+    document.querySelector('#journey-options').replaceChildren();
+    selectedMachine.journeys.forEach(journey => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'journey-option border border-line bg-white p-5 text-left transition hover:border-rose';
+      const name = document.createElement('span');
+      name.className = 'text-[10px] uppercase tracking-[.14em] text-stone-400';
+      name.textContent = journey.name;
+      const hours = document.createElement('span');
+      hours.className = 'mt-3 block text-sm font-medium';
+      hours.textContent = `${journey.hours} ` + {{ site.get('text_hours_of_use', 'horas de uso')|tojson }};
+      const price = document.createElement('span');
+      price.className = 'mt-2 block text-lg';
+      price.textContent = currency(journey.price);
+      option.append(name, hours, price);
+      option.addEventListener('click', () => {
+        selectedJourney = journey;
+        document.querySelector('#booking-journey-id').value = journey.id;
+        document.querySelectorAll('.journey-option').forEach(item => item.classList.remove('border-rose', 'bg-blush'));
+        option.classList.add('border-rose', 'bg-blush');
+        const next = document.querySelector('.booking-step[data-step="0"] .next-step');
+        next.disabled = false;
+        next.textContent = {{ site.get('text_continue', 'Continuar')|tojson }};
+      });
+      document.querySelector('#journey-options').append(option);
+    });
+    document.querySelector('#booking-date').value = '';
+    document.querySelector('#booking-time').value = '';
+    document.querySelector('#date-picker').value = '';
+    const today = new Date();
+    document.querySelector('#date-picker').min = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    renderStep(0);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+  }));
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+  }
   document.querySelector('#close-booking').addEventListener('click', closeModal);
   modal.addEventListener('click', event => { if (event.target === modal) closeModal(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
   document.querySelectorAll('.next-step').forEach(button => button.addEventListener('click', () => {
-    if (currentStep === 0 && !selectedJourney) return;
-    if (currentStep === 1 && !selectedSlot) return;
+    if ((currentStep === 0 && !selectedJourney) || (currentStep === 1 && !selectedSlot)) return;
     if (currentStep === 1) {
       const date = document.querySelector('#date-picker').value;
       document.querySelector('#booking-date').value = date;
       document.querySelector('#booking-time').value = selectedSlot;
-      document.querySelector('#booking-summary').textContent = `${selectedMachine.name} · ${selectedJourney.name} · ${date.split('-').reverse().join('/')} a las ${selectedSlot} · ${selectedJourney.hours} h · ${currency(selectedJourney.price)}`;
+      document.querySelector('#booking-summary').textContent = `${selectedMachine.name} · ${selectedJourney.name} · ${date.split('-').reverse().join('/')} a las ${selectedSlot} · ${selectedJourney.hours}h · ${currency(selectedJourney.price)}`;
     }
     renderStep(currentStep + 1);
   }));
   document.querySelectorAll('.back-step').forEach(button => button.addEventListener('click', () => renderStep(currentStep - 1)));
-  document.querySelector('#date-picker').addEventListener('change', async event => { selectedSlot = null; document.querySelector('.booking-step[data-step="1"] .next-step').disabled = true; document.querySelector('#slot-list').replaceChildren(); const empty = document.querySelector('#slot-empty'); empty.classList.add('hidden'); if (!event.target.value) return; document.querySelector('#slot-loading').classList.remove('hidden'); try { const params = new URLSearchParams({ machine_id: selectedMachine.id, journey_id: selectedJourney.id, date: event.target.value }); const response = await fetch(`/api/availability?${params}`); const result = await response.json(); result.slots.forEach(time => { const button = document.createElement('button'); button.type = 'button'; button.textContent = time; button.className = 'slot-choice border border-line bg-white px-3 py-3 text-xs transition hover:border-rose'; button.addEventListener('click', () => { document.querySelectorAll('.slot-choice').forEach(slot => slot.classList.remove('border-rose', 'bg-blush')); button.classList.add('border-rose', 'bg-blush'); selectedSlot = time; document.querySelector('.booking-step[data-step="1"] .next-step').disabled = false; }); document.querySelector('#slot-list').append(button); }); empty.classList.toggle('hidden', result.slots.length > 0); } catch { empty.textContent = 'No pudimos consultar los turnos. Probá nuevamente.'; empty.classList.remove('hidden'); } finally { document.querySelector('#slot-loading').classList.add('hidden'); } });
+  document.querySelector('#date-picker').addEventListener('change', async event => {
+    selectedSlot = null;
+    document.querySelector('.booking-step[data-step="1"] .next-step').disabled = true;
+    document.querySelector('#slot-list').replaceChildren();
+    const empty = document.querySelector('#slot-empty');
+    empty.classList.add('hidden');
+    if (!event.target.value) return;
+    document.querySelector('#slot-loading').classList.remove('hidden');
+    try {
+      const params = new URLSearchParams({ machine_id: selectedMachine.id, journey_id: selectedJourney.id, date: event.target.value });
+      const response = await fetch(`/api/availability?${params}`);
+      const result = await response.json();
+      result.slots.forEach(time => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = time;
+        button.className = 'slot-choice border border-line bg-white px-3 py-3 text-xs transition hover:border-rose';
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.slot-choice').forEach(slot => slot.classList.remove('border-rose', 'bg-blush'));
+          button.classList.add('border-rose', 'bg-blush');
+          selectedSlot = time;
+          document.querySelector('.booking-step[data-step="1"] .next-step').disabled = false;
+        });
+        document.querySelector('#slot-list').append(button);
+      });
+      empty.classList.toggle('hidden', result.slots.length > 0);
+    } catch {
+      empty.textContent = {{ site.get('text_slot_error', 'No pudimos consultar los turnos. Probá nuevamente.')|tojson }};
+      empty.classList.remove('hidden');
+    } finally {
+      document.querySelector('#slot-loading').classList.add('hidden');
+    }
+  });
 </script>
 {% endblock %}

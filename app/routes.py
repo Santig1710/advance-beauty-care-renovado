@@ -1,13 +1,86 @@
+import json
+import os
+from pathlib import Path
 from datetime import datetime, time, timedelta
 from functools import wraps
 from urllib.parse import quote
+from uuid import uuid4
 
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app import db
 from app.models import AdminUser, Booking, Machine, RentalJourney, SiteSetting
 
 bp = Blueprint("main", __name__)
+
+PUBLIC_TEXT_FIELDS = {
+    "text_page_title": ("Título del navegador", "Alquiler de aparatología premium | Advance Beauty Care"),
+    "text_brand": ("Nombre del negocio", "Advance Beauty Care"),
+    "text_nav_catalog": ("Navegación: catálogo", "Equipos"),
+    "text_nav_reserve": ("Navegación: reservar", "Reservar"),
+    "text_hero_kicker": ("Portada: texto pequeño", "Tecnología estética · Alquiler profesional"),
+    "text_hero_cta": ("Portada: botón", "Explorar equipos"),
+    "text_slider_label": ("Portada: descripción accesible de imágenes", "Mostrar imagen"),
+    "text_catalog_eyebrow": ("Catálogo: texto pequeño", "Selección profesional"),
+    "text_catalog_title": ("Catálogo: título", "Equipos disponibles"),
+    "text_catalog_copy": ("Catálogo: descripción", "Elegí tu tecnología y armá una reserva en pocos pasos."),
+    "text_search_placeholder": ("Buscador: indicación", "Buscar por equipo o tratamiento"),
+    "text_search_aria": ("Buscador: descripción accesible", "Buscar equipos"),
+    "text_filter_all": ("Filtro: todas las categorías", "Todos"),
+    "text_product_badge": ("Etiqueta de producto", "Premium"),
+    "text_price_from": ("Precio: desde", "Desde"),
+    "text_availability_consult": ("Precio: sin jornadas", "Consultar disponibilidad"),
+    "text_choose_equipment": ("Botón de equipo", "Elegir"),
+    "text_no_journeys": ("Equipo sin jornadas configuradas", "Este equipo no tiene jornadas configuradas"),
+    "text_no_equipment": ("Catálogo vacío", "Pronto vas a encontrar nuevos equipos disponibles."),
+    "text_no_search_result": ("Búsqueda sin resultados", "No encontramos equipos con esa búsqueda."),
+    "text_feature_1_title": ("Paso 1: título", "Elegí"),
+    "text_feature_1_copy": ("Paso 1: descripción", "Tecnología para cada protocolo"),
+    "text_feature_2_title": ("Paso 2: título", "Reservá"),
+    "text_feature_2_copy": ("Paso 2: descripción", "Turno confirmado sin llamadas"),
+    "text_feature_3_title": ("Paso 3: título", "Potenciá"),
+    "text_feature_3_copy": ("Paso 3: descripción", "Tu práctica profesional"),
+    "text_footer_copy": ("Pie de página: descripción", "Aparatología estética de alta gama"),
+    "text_booking_badge": ("Reserva: texto pequeño", "Tu reserva"),
+    "text_booking_title": ("Reserva: título", "Un paso más cerca"),
+    "text_progress_1": ("Reserva: paso 1", "Jornada"),
+    "text_progress_2": ("Reserva: paso 2", "Turno"),
+    "text_progress_3": ("Reserva: paso 3", "Tus datos"),
+    "text_journey_title": ("Reserva: elegir jornada", "¿Qué jornada necesitás?"),
+    "text_journey_copy": ("Reserva: ayuda para jornada", "Seleccioná la duración que mejor se adapta a tu agenda."),
+    "text_journey_continue": ("Reserva: continuar sin jornada", "Elegí una jornada para continuar"),
+    "text_continue": ("Reserva: botón continuar", "Continuar"),
+    "text_date_title": ("Reserva: elegir fecha", "Elegí fecha y horario"),
+    "text_date_copy": ("Reserva: ayuda para fecha", "Los turnos se actualizan según la disponibilidad real."),
+    "text_date_label": ("Reserva: campo fecha", "Fecha"),
+    "text_slot_label": ("Reserva: horarios disponibles", "Horarios disponibles"),
+    "text_slot_loading": ("Reserva: consultando horarios", "Consultando..."),
+    "text_slot_empty": ("Reserva: sin horarios", "No hay horarios libres para esta fecha. Probá otra."),
+    "text_back": ("Reserva: botón atrás", "Atrás"),
+    "text_contact_title": ("Reserva: datos de contacto", "Tus datos de contacto"),
+    "text_contact_copy": ("Reserva: ayuda de contacto", "Los usamos para preparar tu reserva y contactarte."),
+    "text_hours_of_use": ("Reserva: duración de jornada", "horas de uso"),
+    "text_customer_name": ("Reserva: nombre", "Nombre y apellido"),
+    "text_customer_email": ("Reserva: correo", "Correo electrónico"),
+    "text_customer_phone": ("Reserva: teléfono", "Teléfono / WhatsApp"),
+    "text_business_name": ("Reserva: negocio", "Nombre del centro"),
+    "text_optional": ("Reserva: marca de campo opcional", "(opcional)"),
+    "text_notes": ("Reserva: comentarios", "Comentarios"),
+    "text_booking_summary": ("Reserva: confirmación", "Al confirmar guardamos tu solicitud y abrimos WhatsApp con los detalles."),
+    "text_confirm_booking": ("Reserva: botón confirmar", "Confirmar por WhatsApp"),
+    "text_close_booking": ("Reserva: descripción accesible para cerrar", "Cerrar reserva"),
+    "text_slot_error": ("Reserva: error al consultar horarios", "No pudimos consultar los turnos. Probá nuevamente."),
+}
+
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+MAX_IMAGE_SIZE = 8 * 1024 * 1024
+IMAGE_SIGNATURES = {
+    ".jpg": lambda header: header.startswith(b"\xff\xd8\xff"),
+    ".jpeg": lambda header: header.startswith(b"\xff\xd8\xff"),
+    ".png": lambda header: header.startswith(b"\x89PNG\r\n\x1a\n"),
+    ".gif": lambda header: header.startswith((b"GIF87a", b"GIF89a")),
+    ".webp": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WEBP",
+}
 
 
 def setting(key, default=""):
@@ -17,6 +90,60 @@ def setting(key, default=""):
 
 def site_content():
     return {item.key: item.value for item in SiteSetting.query.all()}
+
+
+def is_local_upload(value):
+    if not value or not value.startswith("/static/uploads/"):
+        return False
+    filename = value.removeprefix("/static/uploads/")
+    return bool(filename) and Path(filename).name == filename
+
+
+def validate_image_upload(image):
+    if not image or not image.filename:
+        return
+    extension = Path(image.filename).suffix.lower()
+    if extension not in ALLOWED_IMAGE_EXTENSIONS:
+        raise ValueError("Usá una imagen JPG, PNG, WEBP o GIF.")
+    image.stream.seek(0, os.SEEK_END)
+    size = image.stream.tell()
+    image.stream.seek(0)
+    if size > MAX_IMAGE_SIZE:
+        raise ValueError("Cada imagen debe pesar menos de 8 MB.")
+    header = image.stream.read(12)
+    image.stream.seek(0)
+    if not IMAGE_SIGNATURES[extension](header):
+        raise ValueError("El archivo seleccionado no parece una imagen válida.")
+
+
+def save_image_upload(image):
+    validate_image_upload(image)
+    extension = Path(image.filename).suffix.lower()
+    filename = f"{uuid4().hex}{extension}"
+    upload_directory = Path(current_app.config["UPLOAD_FOLDER"])
+    upload_directory.mkdir(parents=True, exist_ok=True)
+    image.save(upload_directory / filename)
+    return f"/static/uploads/{filename}"
+
+
+def settings_context():
+    values = site_content()
+    sections = []
+    try:
+        parsed = json.loads(values.get("custom_sections", "[]"))
+        if isinstance(parsed, list):
+            sections = [item for item in parsed if isinstance(item, dict)]
+    except (TypeError, json.JSONDecodeError):
+        pass
+    return {
+        "settings": values,
+        "public_text_fields": [
+            {"key": key, "label": label, "value": values.get(key, default)}
+            for key, (label, default) in PUBLIC_TEXT_FIELDS.items()
+        ],
+        "hero_images": [image for image in values.get("hero_images", "").splitlines() if is_local_upload(image)],
+        "custom_sections": sections,
+    }
 
 
 def journey_rows_for(machine):
@@ -40,9 +167,11 @@ def available_slots(machine, selected_date, journey):
     try:
         opening = int(setting("opening_hour", "9"))
         closing = int(setting("closing_hour", "20"))
+        interval = int(setting("slot_interval", "30"))
     except ValueError:
         opening, closing = 9, 20
-    if duration <= 0 or opening < 0 or closing > 24 or opening >= closing:
+        interval = 30
+    if duration <= 0 or opening < 0 or closing > 24 or opening >= closing or interval <= 0:
         return []
 
     day_start = datetime.combine(selected_date, time.min)
@@ -66,7 +195,7 @@ def available_slots(machine, selected_date, journey):
         is_past = selected_date == datetime.today().date() and cursor <= datetime.now()
         if not is_past:
             slots.append(cursor.strftime("%H:%M"))
-        cursor += timedelta(minutes=30)
+        cursor += timedelta(minutes=interval)
     return slots
 
 
@@ -78,7 +207,25 @@ def inject_site_content():
 @bp.route("/")
 def home():
     machines = Machine.query.filter_by(active=True).order_by(Machine.name).all()
-    return render_template("home.html", machines=machines)
+    settings = site_content()
+    hero_images = [image for image in settings.get("hero_images", "").splitlines() if is_local_upload(image)]
+    machine_images = {
+        machine.id: machine.image_url if is_local_upload(machine.image_url) else ""
+        for machine in machines
+    }
+    try:
+        custom_sections = json.loads(settings.get("custom_sections", "[]"))
+        if not isinstance(custom_sections, list):
+            custom_sections = []
+    except (TypeError, json.JSONDecodeError):
+        custom_sections = []
+    return render_template(
+        "home.html",
+        machines=machines,
+        machine_images=machine_images,
+        hero_images=hero_images,
+        custom_sections=custom_sections,
+    )
 
 
 @bp.get("/api/availability")
@@ -178,7 +325,17 @@ def admin_logout():
 @admin_required
 def admin_dashboard():
     bookings = Booking.query.order_by(Booking.start_at.desc()).all()
-    return render_template("admin_dashboard_configurable.html", machines=Machine.query.order_by(Machine.name).all(), bookings=bookings)
+    machines = Machine.query.order_by(Machine.name).all()
+    machine_images = {
+        machine.id: machine.image_url if is_local_upload(machine.image_url) else ""
+        for machine in machines
+    }
+    return render_template(
+        "admin_dashboard_configurable.html",
+        machines=machines,
+        machine_images=machine_images,
+        bookings=bookings,
+    )
 
 
 @bp.route("/admin/maquinas/nueva", methods=["GET", "POST"])
@@ -193,7 +350,8 @@ def edit_machine(machine_id=None):
             machine.name = request.form.get("name", "").strip()
             machine.category = request.form.get("category", "Estética").strip()
             machine.description = request.form.get("description", "").strip()
-            machine.image_url = request.form.get("image_url", "").strip()
+            image_upload = request.files.get("image_file")
+            validate_image_upload(image_upload)
             machine.active = request.form.get("active") == "on"
             journey_names = request.form.getlist("journey_name")
             journey_hours = request.form.getlist("journey_hours")
@@ -206,7 +364,7 @@ def edit_machine(machine_id=None):
             if not machine.name or not journeys or any(hours <= 0 or price < 0 for _, hours, price in journeys):
                 raise ValueError
         except ValueError:
-            flash("Revisá los datos y usá duraciones y precios válidos.", "error")
+            flash("Revisá los datos, las duraciones y la imagen seleccionada.", "error")
             journey_rows = list(
                 zip(
                     request.form.getlist("journey_name"),
@@ -215,6 +373,10 @@ def edit_machine(machine_id=None):
                 )
             ) or journey_rows_for(machine)
             return render_template("machine_form_configurable.html", machine=machine, journey_rows=journey_rows)
+        if image_upload and image_upload.filename:
+            machine.image_url = save_image_upload(image_upload)
+        elif not is_local_upload(machine.image_url):
+            machine.image_url = ""
         machine.half_day_hours = journeys[0][1]
         machine.half_day_price = journeys[0][2]
         machine.full_day_hours = journeys[1][1] if len(journeys) > 1 else 0
@@ -265,20 +427,64 @@ def update_booking_status(booking_id):
 @bp.route("/admin/personalizacion", methods=["GET", "POST"])
 @admin_required
 def edit_content():
-    keys = ["hero_title", "hero_subtitle", "hero_images", "whatsapp_number", "whatsapp_template", "opening_hour", "closing_hour"]
+    keys = ["hero_title", "hero_subtitle", "whatsapp_number", "whatsapp_template", "opening_hour", "closing_hour", "slot_interval"]
     if request.method == "POST":
         opening = request.form.get("opening_hour", "9")
         closing = request.form.get("closing_hour", "20")
-        if not opening.isdigit() or not closing.isdigit() or int(opening) >= int(closing) or int(closing) > 24:
-            flash("El horario de atención debe ser válido.", "error")
-            return render_template("settings.html", settings=site_content())
-        for key in keys:
+        interval = request.form.get("slot_interval", "30")
+        uploads = request.files.getlist("hero_image_files")
+        try:
+            if (
+                not opening.isdigit()
+                or not closing.isdigit()
+                or int(opening) >= int(closing)
+                or int(opening) > 23
+                or int(closing) > 24
+                or not interval.isdigit()
+                or not 5 <= int(interval) <= 360
+                or int(interval) % 5 != 0
+            ):
+                raise ValueError
+            for image in uploads:
+                validate_image_upload(image)
+        except ValueError:
+            flash("Revisá el horario, el intervalo y las imágenes seleccionadas.", "error")
+            return render_template("settings.html", **settings_context())
+
+        removed_images = set(request.form.getlist("remove_hero_image"))
+        hero_images = [
+            image
+            for image in site_content().get("hero_images", "").splitlines()
+            if is_local_upload(image) and image not in removed_images
+        ]
+        hero_images.extend(save_image_upload(image) for image in uploads if image.filename)
+        for key in keys + list(PUBLIC_TEXT_FIELDS):
             item = db.session.get(SiteSetting, key)
             if item:
                 item.value = request.form.get(key, "").strip()
             else:
                 db.session.add(SiteSetting(key=key, value=request.form.get(key, "").strip()))
+        hero_setting = db.session.get(SiteSetting, "hero_images")
+        hero_value = "\n".join(hero_images)
+        if hero_setting:
+            hero_setting.value = hero_value
+        else:
+            db.session.add(SiteSetting(key="hero_images", value=hero_value))
+        custom_sections = [
+            {"title": title.strip(), "body": body.strip()}
+            for title, body in zip(
+                request.form.getlist("custom_section_title"),
+                request.form.getlist("custom_section_body"),
+            )
+            if title.strip() or body.strip()
+        ]
+        sections_setting = db.session.get(SiteSetting, "custom_sections")
+        sections_value = json.dumps(custom_sections, ensure_ascii=False)
+        if sections_setting:
+            sections_setting.value = sections_value
+        else:
+            db.session.add(SiteSetting(key="custom_sections", value=sections_value))
         db.session.commit()
         flash("Contenido actualizado.", "success")
         return redirect(url_for("main.edit_content"))
-    return render_template("settings.html", settings=site_content())
+    return render_template("settings.html", **settings_context())

@@ -1,3 +1,91 @@
 {% extends 'base.html' %}
 {% block title %}Personalización | Advance Beauty Care{% endblock %}
-{% block body %}<main class="mx-auto max-w-3xl px-5 py-10 md:py-14"><a href="{{ url_for('main.admin_dashboard') }}" class="text-xs text-stone-500 hover:text-ink">← Volver al panel</a><p class="mt-7 text-[10px] font-semibold uppercase tracking-[.2em] text-rose">Contenido y preferencias</p><h1 class="display mt-2 text-4xl">Personalizá tu sitio</h1><form method="post" class="mt-8 space-y-7 bg-white p-6 sm:p-8"><section><h2 class="display text-xl">Portada</h2><div class="mt-4 space-y-4"><label class="block text-xs text-stone-600">Título principal<input name="hero_title" value="{{ settings.get('hero_title', '') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label><label class="block text-xs text-stone-600">Texto de portada<textarea name="hero_subtitle" rows="2" class="mt-2 w-full border border-line px-4 py-3 text-sm">{{ settings.get('hero_subtitle', '') }}</textarea></label><label class="block text-xs text-stone-600">Imágenes del carrusel, una URL https:// por línea<textarea name="hero_images" rows="4" class="mt-2 w-full border border-line px-4 py-3 text-sm">{{ settings.get('hero_images', '') }}</textarea></label></div></section><section class="border-t border-line pt-6"><h2 class="display text-xl">Horarios disponibles</h2><p class="mt-1 text-xs text-stone-500">Los turnos se ofrecen cada 30 minutos dentro de esta franja.</p><div class="mt-4 grid gap-4 sm:grid-cols-2"><label class="text-xs text-stone-600">Desde<input name="opening_hour" type="number" min="0" max="23" required value="{{ settings.get('opening_hour', '9') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label><label class="text-xs text-stone-600">Hasta<input name="closing_hour" type="number" min="1" max="24" required value="{{ settings.get('closing_hour', '20') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label></div></section><section class="border-t border-line pt-6"><h2 class="display text-xl">WhatsApp</h2><div class="mt-4 space-y-4"><label class="block text-xs text-stone-600">Número de WhatsApp con código de país<input name="whatsapp_number" value="{{ settings.get('whatsapp_number', '') }}" placeholder="5491112345678" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label><label class="block text-xs text-stone-600">Plantilla del mensaje<textarea name="whatsapp_template" rows="7" class="mt-2 w-full border border-line px-4 py-3 font-mono text-xs leading-6">{{ settings.get('whatsapp_template', '') }}</textarea><span class="mt-2 block text-[10px] leading-5 text-stone-400">Variables: {machine}, {journey}, {date}, {time}, {name}, {phone}, {email}, {business}, {price}, {notes}.</span></label></div></section><button class="bg-ink px-6 py-4 text-xs text-white hover:bg-rose">Guardar cambios</button></form></main>{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-4xl px-5 py-10 md:py-14">
+  <a href="{{ url_for('main.admin_dashboard') }}" class="text-xs text-stone-500 hover:text-ink">← Volver al panel</a>
+  <p class="mt-7 text-[10px] font-semibold uppercase tracking-[.2em] text-rose">Contenido y preferencias</p>
+  <h1 class="display mt-2 text-4xl">Personalizá tu sitio</h1>
+  <form method="post" enctype="multipart/form-data" class="mt-8 space-y-8 bg-white p-6 sm:p-8">
+    <section>
+      <h2 class="display text-xl">Portada e imágenes</h2>
+      <div class="mt-4 space-y-4">
+        <label class="block text-xs text-stone-600">Título principal<input name="hero_title" value="{{ settings.get('hero_title', '') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label>
+        <label class="block text-xs text-stone-600">Texto de portada<textarea name="hero_subtitle" rows="2" class="mt-2 w-full border border-line px-4 py-3 text-sm">{{ settings.get('hero_subtitle', '') }}</textarea></label>
+        <label class="block text-xs text-stone-600">Agregar fotos al carrusel<input name="hero_image_files" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif" class="mt-2 block w-full border border-line bg-white px-4 py-3 text-sm"><span class="mt-1 block text-[10px] text-stone-400">Elegí imágenes de tu dispositivo. JPG, PNG, WEBP o GIF; hasta 8 MB cada una.</span></label>
+        {% if hero_images %}
+        <div class="grid gap-4 sm:grid-cols-3">
+          {% for image in hero_images %}
+          <label class="text-xs text-stone-600"><img src="{{ image }}" alt="Imagen {{ loop.index }} del carrusel" class="aspect-[4/3] w-full object-cover"><span class="mt-2 flex items-center gap-2"><input type="checkbox" name="remove_hero_image" value="{{ image }}" class="accent-rose">Quitar esta imagen</span></label>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="border-t border-line pt-6">
+      <h2 class="display text-xl">Horarios disponibles</h2>
+      <p class="mt-1 text-xs text-stone-500">Definí la franja de atención y cada cuánto se inicia un turno.</p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-3">
+        <label class="text-xs text-stone-600">Desde<input name="opening_hour" type="number" min="0" max="23" required value="{{ settings.get('opening_hour', '9') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label>
+        <label class="text-xs text-stone-600">Hasta<input name="closing_hour" type="number" min="1" max="24" required value="{{ settings.get('closing_hour', '20') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label>
+        <label class="text-xs text-stone-600">Ofrecer cada<input name="slot_interval" type="number" min="5" max="360" step="5" required value="{{ settings.get('slot_interval', '30') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"><span class="mt-1 block text-[10px] text-stone-400">Minutos</span></label>
+      </div>
+    </section>
+
+    <section class="border-t border-line pt-6">
+      <h2 class="display text-xl">WhatsApp</h2>
+      <div class="mt-4 space-y-4">
+        <label class="block text-xs text-stone-600">Número con código de país<input name="whatsapp_number" value="{{ settings.get('whatsapp_number', '') }}" placeholder="5491112345678" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label>
+        <label class="block text-xs text-stone-600">Plantilla del mensaje<textarea name="whatsapp_template" rows="7" class="mt-2 w-full border border-line px-4 py-3 font-mono text-xs leading-6">{{ settings.get('whatsapp_template', '') }}</textarea><span class="mt-2 block text-[10px] leading-5 text-stone-400">Variables: {machine}, {journey}, {date}, {time}, {name}, {phone}, {email}, {business}, {price}, {notes}.</span></label>
+      </div>
+    </section>
+
+    <section class="border-t border-line pt-6">
+      <h2 class="display text-xl">Textos de la página pública</h2>
+      <p class="mt-1 text-xs text-stone-500">Editá los títulos, indicaciones, botones y mensajes que ven tus clientes.</p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {% for field in public_text_fields %}
+        <label class="block text-xs text-stone-600">{{ field.label }}<textarea name="{{ field.key }}" rows="2" class="mt-2 w-full border border-line px-4 py-3 text-sm">{{ field.value }}</textarea></label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="border-t border-line pt-6">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div><h2 class="display text-xl">Secciones adicionales</h2><p class="mt-1 text-xs text-stone-500">Agregá bloques de texto que aparecerán en la página pública.</p></div>
+        <button id="add-section" type="button" class="border border-line px-4 py-3 text-xs hover:border-rose">+ Agregar sección</button>
+      </div>
+      <div id="custom-sections" class="mt-4 space-y-4">
+        {% for section in custom_sections %}
+        <div class="custom-section grid gap-3 border border-line bg-paper p-4">
+          <label class="text-xs text-stone-600">Título<input name="custom_section_title" value="{{ section.get('title', '') }}" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></label>
+          <label class="text-xs text-stone-600">Texto<textarea name="custom_section_body" rows="3" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm">{{ section.get('body', '') }}</textarea></label>
+          <button type="button" class="remove-section justify-self-start border border-line px-3 py-2 text-xs text-stone-500 hover:border-red-300 hover:text-red-700">Quitar sección</button>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <button class="bg-ink px-6 py-4 text-xs text-white hover:bg-rose">Guardar cambios</button>
+  </form>
+</main>
+<template id="section-template">
+  <div class="custom-section grid gap-3 border border-line bg-paper p-4">
+    <label class="text-xs text-stone-600">Título<input name="custom_section_title" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></label>
+    <label class="text-xs text-stone-600">Texto<textarea name="custom_section_body" rows="3" class="mt-2 w-full border border-line bg-white px-3 py-3 text-sm"></textarea></label>
+    <button type="button" class="remove-section justify-self-start border border-line px-3 py-2 text-xs text-stone-500 hover:border-red-300 hover:text-red-700">Quitar sección</button>
+  </div>
+</template>
+{% endblock %}
+{% block scripts %}
+<script>
+  const sectionList = document.querySelector('#custom-sections');
+  document.querySelector('#add-section').addEventListener('click', () => {
+    sectionList.append(document.querySelector('#section-template').content.cloneNode(true));
+  });
+  sectionList.addEventListener('click', event => {
+    const button = event.target.closest('.remove-section');
+    if (button) button.closest('.custom-section').remove();
+  });
+</script>
+{% endblock %}
