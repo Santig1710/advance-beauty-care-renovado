@@ -99,7 +99,6 @@
   }));
 
   const modal = document.querySelector('#booking-modal');
-  const bookingForm = document.querySelector('#booking-form');
   let selectedMachine = null;
   let selectedJourney = null;
   let selectedSlot = null;
@@ -108,16 +107,12 @@
   const operatorPrice = {{ operator_price|tojson }};
   const shippingText = {
     address: {{ site.get('text_delivery_address', 'Dirección del centro de estética')|tojson }},
-    hint: {{ site.get('text_delivery_hint', 'Ingresá calle, altura y localidad para calcular el recorrido y el envío.')|tojson }},
-    calculate: {{ site.get('text_delivery_calculate', 'Calcular envío')|tojson }},
-    loading: {{ site.get('text_delivery_loading', 'Calculando recorrido...')|tojson }},
-    error: {{ site.get('text_delivery_error', 'No pudimos calcular el envío. Revisá la dirección e intentá de nuevo.')|tojson }},
+    hint: {{ shipping_message|tojson }},
+    pending: {{ site.get('text_delivery_pending', 'Envío y total final a confirmar')|tojson }},
     operator: {{ site.get('text_operator_option', 'Quiero alquilar con operadora')|tojson }},
     rental: {{ site.get('text_rental_amount', 'Alquiler')|tojson }},
     operatorFee: {{ site.get('text_operator_amount', 'Operadora')|tojson }},
-    delivery: {{ site.get('text_delivery_amount', 'Envío')|tojson }},
-    subtotal: {{ site.get('text_order_subtotal', 'Subtotal')|tojson }},
-    total: {{ site.get('text_order_total', 'Total')|tojson }}
+    subtotal: {{ site.get('text_subtotal_without_shipping', 'Subtotal sin envío')|tojson }}
   };
   const addressInput = document.createElement('input');
   addressInput.type = 'text';
@@ -133,22 +128,9 @@
   const addressHint = document.createElement('p');
   addressHint.className = 'mt-2 text-[10px] leading-5 text-stone-500';
   addressHint.textContent = shippingText.hint;
-  const quoteButton = document.createElement('button');
-  quoteButton.type = 'button';
-  quoteButton.className = 'mt-3 border border-line bg-white px-4 py-3 text-xs transition hover:border-rose';
-  quoteButton.textContent = shippingText.calculate;
-  const quoteStatus = document.createElement('p');
-  quoteStatus.className = 'mt-2 min-h-5 text-xs text-stone-500';
-  quoteStatus.setAttribute('role', 'status');
-  quoteStatus.setAttribute('aria-live', 'polite');
   const deliveryPanel = document.createElement('div');
   deliveryPanel.className = 'sm:col-span-2 border-t border-line pt-4';
-  deliveryPanel.append(addressLabel, addressHint, quoteButton, quoteStatus);
-  const quoteToken = document.createElement('input');
-  quoteToken.type = 'hidden';
-  quoteToken.name = 'delivery_quote_token';
-  bookingForm.append(quoteToken);
-  let shippingQuote = null;
+  deliveryPanel.append(addressLabel, addressHint);
   let operatorCheckbox = null;
   if (operatorPrice > 0) {
     const operatorLabel = document.createElement('label');
@@ -162,83 +144,8 @@
     operatorLabel.append(operatorCheckbox, operatorCopy);
     deliveryPanel.append(operatorLabel);
   }
-  const priceBreakdown = document.createElement('div');
-  priceBreakdown.className = 'mt-4 hidden space-y-2 border-t border-line pt-4 text-xs';
-  const priceRows = {};
-  for (const [key, label] of [['rental', shippingText.rental], ['operator', shippingText.operatorFee], ['delivery', shippingText.delivery], ['subtotal', shippingText.subtotal], ['total', shippingText.total]]) {
-    const row = document.createElement('div');
-    row.className = 'flex justify-between gap-4';
-    const name = document.createElement('span');
-    name.textContent = label;
-    const value = document.createElement('span');
-    value.className = 'font-medium text-ink';
-    row.append(name, value);
-    priceBreakdown.append(row);
-    priceRows[key] = value;
-  }
-  priceRows.total.parentElement.classList.add('border-t', 'border-line', 'pt-2', 'text-sm');
-  deliveryPanel.append(priceBreakdown);
   document.querySelector('.booking-step[data-step="2"] .grid').append(deliveryPanel);
-  const addressNumberFormat = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  function updatePriceBreakdown() {
-    if (!shippingQuote || !selectedJourney) {
-      priceBreakdown.classList.add('hidden');
-      return;
-    }
-    const operatorFee = operatorCheckbox?.checked ? operatorPrice : 0;
-    const subtotal = selectedJourney.price + operatorFee;
-    priceRows.rental.textContent = currency(selectedJourney.price);
-    priceRows.operator.textContent = operatorFee ? currency(operatorFee) : 'No';
-    priceRows.delivery.textContent = currency(shippingQuote.delivery_fee);
-    priceRows.subtotal.textContent = currency(subtotal);
-    priceRows.total.textContent = currency(subtotal + shippingQuote.delivery_fee);
-    priceBreakdown.classList.remove('hidden');
-  }
-  async function calculateShippingQuote() {
-    const address = addressInput.value.trim();
-    if (!address) {
-      quoteStatus.textContent = shippingText.error;
-      return;
-    }
-    quoteButton.disabled = true;
-    quoteStatus.textContent = shippingText.loading;
-    shippingQuote = null;
-    quoteToken.value = '';
-    updatePriceBreakdown();
-    try {
-      const params = new URLSearchParams({ address });
-      const response = await fetch(`/api/shipping-quote?${params}`);
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || shippingText.error);
-      if (address !== addressInput.value.trim()) return;
-      shippingQuote = result;
-      quoteToken.value = result.token;
-      quoteStatus.textContent = `Recorrido: ${addressNumberFormat.format(result.distance_km)} km. Envío: ${currency(result.delivery_fee)}.`;
-      updatePriceBreakdown();
-    } catch (error) {
-      quoteStatus.textContent = error.message || shippingText.error;
-    } finally {
-      quoteButton.disabled = false;
-    }
-  }
-  addressInput.addEventListener('input', () => {
-    shippingQuote = null;
-    quoteToken.value = '';
-    quoteStatus.textContent = '';
-    updatePriceBreakdown();
-  });
-  addressInput.addEventListener('blur', () => {
-    if (addressInput.value.trim()) calculateShippingQuote();
-  });
-  quoteButton.addEventListener('click', calculateShippingQuote);
-  operatorCheckbox?.addEventListener('change', updatePriceBreakdown);
-  bookingForm.addEventListener('submit', event => {
-    if (!shippingQuote || shippingQuote.address !== addressInput.value.trim()) {
-      event.preventDefault();
-      quoteStatus.textContent = shippingText.error;
-      addressInput.focus();
-    }
-  });
+  operatorCheckbox?.addEventListener('change', updateBookingSummary);
   function renderStep(step) {
     currentStep = step;
     document.querySelectorAll('.booking-step').forEach(section => section.classList.toggle('hidden', Number(section.dataset.step) !== step));
@@ -246,6 +153,14 @@
       item.classList.toggle('text-rose', index <= step);
       item.classList.toggle('font-semibold', index === step);
     });
+  }
+  function updateBookingSummary() {
+    if (currentStep !== 2 || !selectedMachine || !selectedJourney) return;
+    const date = document.querySelector('#booking-date').value;
+    const time = document.querySelector('#booking-time').value;
+    const operatorFee = operatorCheckbox?.checked ? operatorPrice : 0;
+    const subtotal = selectedJourney.price + operatorFee;
+    document.querySelector('#booking-summary').textContent = `${selectedMachine.name} · ${selectedJourney.name} · ${date.split('-').reverse().join('/')} a las ${time} · ${shippingText.rental} ${currency(selectedJourney.price)}${operatorFee ? ` · ${shippingText.operatorFee} ${currency(operatorFee)}` : ''} · ${shippingText.subtotal} ${currency(subtotal)} · ${shippingText.pending}`;
   }
   document.querySelectorAll('.open-booking').forEach(button => button.addEventListener('click', () => {
     selectedMachine = { ...button.dataset, journeys: JSON.parse(button.dataset.journeys) };
@@ -303,9 +218,9 @@
       const date = document.querySelector('#date-picker').value;
       document.querySelector('#booking-date').value = date;
       document.querySelector('#booking-time').value = selectedSlot;
-      document.querySelector('#booking-summary').textContent = `${selectedMachine.name} · ${selectedJourney.name} · ${date.split('-').reverse().join('/')} a las ${selectedSlot} · ${selectedJourney.hours}h · ${currency(selectedJourney.price)}`;
     }
     renderStep(currentStep + 1);
+    updateBookingSummary();
   }));
   document.querySelectorAll('.back-step').forEach(button => button.addEventListener('click', () => renderStep(currentStep - 1)));
   document.querySelector('#date-picker').addEventListener('change', async event => {

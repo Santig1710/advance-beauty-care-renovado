@@ -79,19 +79,23 @@ def create_app(test_config=None):
             "hero_subtitle": "Aparatología estética premium, en el momento que tu negocio la necesita.",
             "hero_images": "",
             "whatsapp_number": app.config["WHATSAPP_NUMBER"],
-            "whatsapp_template": "Hola, quiero consultar por mi reserva:\n\nEquipo: {machine}\nJornada: {journey}\nFecha: {date}\nHorario: {time}\nNombre: {name}\nTeléfono: {phone}\nDirección: {address}\nRecorrido: {distance}\n\nSubtotal: {subtotal}\nEnvío: {shipping}\nOperadora: {operator}\nTotal: {total}",
+            "whatsapp_template": "Hola, quiero consultar por mi reserva:\n\nEquipo: {machine}\nJornada: {journey}\nFecha: {date}\nHorario: {time}\nNombre: {name}\nTeléfono: {phone}\nDirección: {address}\nDistancia: {distance}\n\nSubtotal sin envío: {subtotal}\nEnvío: {shipping}\nOperadora: {operator}\nTotal final: {total}",
             "opening_hour": "9",
             "closing_hour": "20",
             "slot_interval": "30",
-            "shipping_origin": "Pilar Centro, Pilar, Buenos Aires, Argentina",
             "shipping_free_km": "10",
             "shipping_per_km": "1000",
+            "shipping_message": "El envío se cobra a partir de {km_incluidos} km desde la ubicación de la máquina: {precio_km} por cada km adicional.",
             "operator_price": "0",
         }
         defaults.update({key: value for key, (_, value) in PUBLIC_TEXT_FIELDS.items()})
         for key, value in defaults.items():
             if not SiteSetting.query.filter_by(key=key).first():
                 db.session.add(SiteSetting(key=key, value=value))
+        shipping_message = SiteSetting.query.filter_by(key="shipping_message").first()
+        previous_shipping_message = "Por cada km de distancia con la ubicación de la máquina se le bonificarán {precio_km} al subtotal."
+        if shipping_message and shipping_message.value == previous_shipping_message:
+            shipping_message.value = defaults["shipping_message"]
         if Machine.query.count() == 0:
             db.session.add_all(
                 [

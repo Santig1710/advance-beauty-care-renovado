@@ -3,16 +3,11 @@ import math
 import os
 from pathlib import Path
 from datetime import datetime, time, timedelta
-from functools import lru_cache, wraps
-from threading import Lock
-from time import monotonic, sleep
-from urllib.error import URLError
-from urllib.parse import quote, urlencode
-from urllib.request import Request, urlopen
+from functools import wraps
+from urllib.parse import quote
 from uuid import uuid4
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
-from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from app import db
 from app.models import AdminUser, Booking, Machine, RentalJourney, SiteSetting
@@ -77,16 +72,11 @@ PUBLIC_TEXT_FIELDS = {
     "text_close_booking": ("Reserva: descripción accesible para cerrar", "Cerrar reserva"),
     "text_slot_error": ("Reserva: error al consultar horarios", "No pudimos consultar los turnos. Probá nuevamente."),
     "text_delivery_address": ("Reserva: dirección del centro", "Dirección del centro de estética"),
-    "text_delivery_hint": ("Reserva: ayuda para ingresar dirección", "Ingresá calle, altura y localidad. Se consulta OpenStreetMap para estimar recorrido y envío."),
-    "text_delivery_calculate": ("Reserva: botón para cotizar envío", "Calcular envío"),
-    "text_delivery_loading": ("Reserva: estado de cálculo de envío", "Calculando recorrido..."),
-    "text_delivery_error": ("Reserva: error de cotización", "No pudimos calcular el envío. Revisá la dirección e intentá de nuevo."),
+    "text_delivery_pending": ("Reserva: aviso de envío pendiente", "Envío y total final a confirmar"),
     "text_operator_option": ("Reserva: opción de operadora", "Quiero alquilar con operadora"),
     "text_rental_amount": ("Reserva: detalle de alquiler", "Alquiler"),
     "text_operator_amount": ("Reserva: detalle de operadora", "Operadora"),
-    "text_delivery_amount": ("Reserva: detalle de envío", "Envío"),
-    "text_order_subtotal": ("Reserva: subtotal", "Subtotal"),
-    "text_order_total": ("Reserva: total", "Total"),
+    "text_subtotal_without_shipping": ("Reserva: subtotal sin envío", "Subtotal sin envío"),
 }
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -98,58 +88,6 @@ IMAGE_SIGNATURES = {
     ".gif": lambda header: header.startswith((b"GIF87a", b"GIF89a")),
     ".webp": lambda header: header.startswith(b"RIFF") and header[8:12] == b"WEBP",
 }
-_geocoder_lock = Lock()
-_last_geocode_request = 0.0
-
-
-@lru_cache(maxsize=256)
-def geocode_address(address):
-    global _last_geocode_request
-    query = urlencode({"q": address, "format": "jsonv2", "limit": 1, "countrycodes": "ar"})
-    url = f"https://nominatim.openstreetmap.org/search?{query}"
-    with _geocoder_lock:
-        wait = 1 - (monotonic() - _last_geocode_request)
-        if wait > 0:
-            sleep(wait)
-        _last_geocode_request = monotonic()
-        try:
-            request_object = Request(url, headers={"User-Agent": "AdvanceBeautyCare/1.0 (delivery estimate)"})
-            with urlopen(request_object, timeout=12) as response:
-                results = json.loads(response.read().decode("utf-8"))
-        except (OSError, URLError, TimeoutError, json.JSONDecodeError) as error:
-            raise ValueError("No pudimos consultar el mapa. Intentá de nuevo en unos minutos.") from error
-    if not results:
-        raise ValueError("No encontramos esa dirección en Argentina. Revisá la calle y localidad.")
-    try:
-        return float(results[0]["lon"]), float(results[0]["lat"])
-    except (KeyError, TypeError, ValueError) as error:
-        raise ValueError("No pudimos ubicar esa dirección. Revisá los datos ingresados.") from error
-
-
-@lru_cache(maxsize=256)
-def road_distance_km(origin, destination):
-    origin_lon, origin_lat = geocode_address(origin)
-    destination_lon, destination_lat = geocode_address(destination)
-    coordinates = f"{origin_lon},{origin_lat};{destination_lon},{destination_lat}"
-    url = f"https://router.project-osrm.org/route/v1/driving/{coordinates}?overview=false"
-    try:
-        request_object = Request(url, headers={"User-Agent": "AdvanceBeautyCare/1.0 (delivery estimate)"})
-        with urlopen(request_object, timeout=12) as response:
-            result = json.loads(response.read().decode("utf-8"))
-        return float(result["routes"][0]["distance"]) / 1000
-    except (OSError, URLError, TimeoutError, json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError) as error:
-        raise ValueError("No pudimos calcular el recorrido. Revisá la dirección e intentá otra vez.") from error
-
-
-def delivery_fee_for(distance_km, included_km, price_per_km):
-    extra_km = max(0, distance_km - included_km)
-    return math.ceil(extra_km * price_per_km)
-
-
-def delivery_quote_serializer():
-    return URLSafeTimedSerializer(current_app.config["SECRET_KEY"], salt="delivery-quote")
-
-
 def setting(key, default=""):
     item = db.session.get(SiteSetting, key)
     return item.value if item else default
@@ -290,6 +228,16 @@ def home():
         operator_price = max(0, int(settings.get("operator_price", "0")))
     except ValueError:
         operator_price = 0
+    try:
+        price_per_km = max(0, int(settings.get("shipping_per_km", "1000")))
+    except ValueError:
+        price_per_km = 1000
+    shipping_message = settings.get(
+        "shipping_message",
+        "El envío se cobra a partir de {km_incluidos} km desde la ubicación de la máquina: {precio_km} por cada km adicional.",
+    )
+    shipping_message = shipping_message.replace("{precio_km}", f"${price_per_km:,}".replace(",", "."))
+    shipping_message = shipping_message.replace("{km_incluidos}", str(settings.get("shipping_free_km", "10")))
     return render_template(
         "home.html",
         machines=machines,
@@ -297,6 +245,7 @@ def home():
         hero_images=hero_images,
         custom_sections=custom_sections,
         operator_price=operator_price,
+        shipping_message=shipping_message,
     )
 
 
@@ -314,35 +263,6 @@ def availability():
     if booking_date < datetime.today().date():
         return jsonify({"slots": []})
     return jsonify({"slots": available_slots(machine, booking_date, journey)})
-
-
-@bp.get("/api/shipping-quote")
-def shipping_quote():
-    address = request.args.get("address", "").strip()
-    if not address or len(address) > 300:
-        return jsonify({"error": "Ingresá una dirección de hasta 300 caracteres."}), 400
-    origin = setting("shipping_origin", "Pilar Centro, Pilar, Buenos Aires, Argentina").strip()
-    try:
-        included_km = float(setting("shipping_free_km", "10"))
-        price_per_km = int(setting("shipping_per_km", "1000"))
-        operator_price = int(setting("operator_price", "0"))
-        if not origin or included_km < 0 or price_per_km < 0 or operator_price < 0:
-            raise ValueError
-        distance_km = round(road_distance_km(origin, address), 2)
-    except (TypeError, ValueError) as error:
-        return jsonify({"error": str(error) or "La configuración de envío no es válida."}), 400
-    fee = delivery_fee_for(distance_km, included_km, price_per_km)
-    quote_data = {
-        "address": address,
-        "origin": origin,
-        "distance_km": distance_km,
-        "included_km": included_km,
-        "price_per_km": price_per_km,
-        "operator_price": operator_price,
-        "delivery_fee": fee,
-    }
-    quote_data["token"] = delivery_quote_serializer().dumps(quote_data)
-    return jsonify(quote_data)
 
 
 @bp.post("/reservas")
@@ -368,36 +288,16 @@ def create_booking():
         abort(409, "Ese horario ya no está disponible. Volvé a elegir otro.")
 
     address = request.form.get("delivery_address", "").strip()
-    if not address:
-        abort(400, "Ingresá la dirección del centro de estética.")
-    try:
-        quote_data = delivery_quote_serializer().loads(
-            request.form.get("delivery_quote_token", ""), max_age=1800
-        )
-        included_km = float(setting("shipping_free_km", "10"))
-        price_per_km = int(setting("shipping_per_km", "1000"))
-        operator_price = int(setting("operator_price", "0"))
-        if (
-            quote_data["address"] != address
-            or quote_data["origin"] != setting("shipping_origin", "Pilar Centro, Pilar, Buenos Aires, Argentina").strip()
-            or float(quote_data["included_km"]) != included_km
-            or int(quote_data["price_per_km"]) != price_per_km
-            or int(quote_data["operator_price"]) != operator_price
-        ):
-            raise ValueError
-        distance_km = float(quote_data["distance_km"])
-        delivery_fee = int(quote_data["delivery_fee"])
-        if delivery_fee != delivery_fee_for(distance_km, included_km, price_per_km):
-            raise ValueError
-    except (BadSignature, KeyError, TypeError, ValueError):
-        abort(409, "La cotización venció o cambió. Volvé a calcular el envío.")
+    if not address or len(address) > 300:
+        abort(400, "Ingresá la dirección del centro de estética (hasta 300 caracteres).")
 
     with_operator = request.form.get("with_operator") == "on"
+    operator_price = int(setting("operator_price", "0"))
     if with_operator and operator_price <= 0:
         abort(400, "La opción con operadora no está disponible actualmente.")
     operator_fee = operator_price if with_operator else 0
     subtotal = journey.price + operator_fee
-    total_price = subtotal + delivery_fee
+    total_price = subtotal
 
     booking = Booking(
         machine=machine,
@@ -410,8 +310,8 @@ def create_booking():
         customer_phone=phone,
         business_name=request.form.get("business_name", "").strip(),
         delivery_address=address,
-        distance_km=distance_km,
-        delivery_fee=delivery_fee,
+        distance_km=0,
+        delivery_fee=0,
         with_operator=with_operator,
         operator_fee=operator_fee,
         subtotal=subtotal,
@@ -434,22 +334,22 @@ def create_booking():
         business=booking.business_name or "No indicado",
         price=money(booking.price),
         address=address,
-        distance=f"{distance_km:.2f} km".replace(".", ","),
+        distance="A confirmar manualmente",
         subtotal=money(subtotal),
-        shipping=money(delivery_fee),
+        shipping="A confirmar manualmente",
         operator=money(operator_fee) if with_operator else "No",
-        total=money(total_price),
+        total="A confirmar manualmente",
         notes=booking.notes or "Sin comentarios",
     )
     required_breakdown = ("{address}", "{distance}", "{subtotal}", "{shipping}", "{operator}", "{total}")
     if not all(variable in template for variable in required_breakdown):
         message += (
             "\n\nDetalle del pedido:\n"
-            f"Dirección: {address}\nDistancia: {distance_km:.2f} km\n"
+            f"Dirección: {address}\nDistancia y envío: a confirmar manualmente\n"
             f"Alquiler: {money(booking.price)}\n"
             f"Operadora: {money(operator_fee) if with_operator else 'No'}\n"
-            f"Envío: {money(delivery_fee)}\n"
-            f"Subtotal: {money(subtotal)}\nTotal: {money(total_price)}"
+            f"Envío: a confirmar manualmente\n"
+            f"Subtotal sin envío: {money(subtotal)}\nTotal final: a confirmar"
         )
     whatsapp = "https://wa.me/{}?text={}".format(
         "".join(character for character in setting("whatsapp_number") if character.isdigit()),
@@ -587,16 +487,16 @@ def update_booking_status(booking_id):
 def edit_content():
     keys = [
         "hero_title", "hero_subtitle", "whatsapp_number", "whatsapp_template",
-        "opening_hour", "closing_hour", "slot_interval", "shipping_origin",
-        "shipping_free_km", "shipping_per_km", "operator_price",
+        "opening_hour", "closing_hour", "slot_interval",
+        "shipping_free_km", "shipping_per_km", "shipping_message", "operator_price",
     ]
     if request.method == "POST":
         opening = request.form.get("opening_hour", "9")
         closing = request.form.get("closing_hour", "20")
         interval = request.form.get("slot_interval", "30")
-        shipping_origin = request.form.get("shipping_origin", "").strip()
-        included_km = request.form.get("shipping_free_km", "10")
+        free_km = request.form.get("shipping_free_km", "10")
         price_per_km = request.form.get("shipping_per_km", "1000")
+        shipping_message = request.form.get("shipping_message", "").strip()
         operator_price = request.form.get("operator_price", "0")
         uploads = request.files.getlist("hero_image_files")
         try:
@@ -609,12 +509,12 @@ def edit_content():
                 or not interval.isdigit()
                 or not 5 <= int(interval) <= 360
                 or int(interval) % 5 != 0
-                or not shipping_origin
-                or len(shipping_origin) > 300
-                or not math.isfinite(float(included_km))
-                or not 0 <= float(included_km) <= 500
+                or not math.isfinite(float(free_km))
+                or not 0 <= float(free_km) <= 500
                 or not price_per_km.isdigit()
                 or int(price_per_km) < 0
+                or not shipping_message
+                or len(shipping_message) > 500
                 or not operator_price.isdigit()
                 or int(operator_price) < 0
             ):
@@ -622,7 +522,7 @@ def edit_content():
             for image in uploads:
                 validate_image_upload(image)
         except ValueError:
-            flash("Revisá horarios, tarifas, dirección de origen e imágenes.", "error")
+            flash("Revisá horarios, tarifas, kilómetros e imágenes.", "error")
             return render_template("settings.html", **settings_context())
 
         removed_images = set(request.form.getlist("remove_hero_image"))

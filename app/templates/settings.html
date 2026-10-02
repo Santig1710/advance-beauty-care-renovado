@@ -34,11 +34,11 @@
 
     <section class="border-t border-line pt-6">
       <h2 class="display text-xl">Envíos y operadora</h2>
-      <p class="mt-1 text-xs text-stone-500">Los kilómetros se calculan por recorrido desde el origen. El excedente se cobra por kilómetro adicional.</p>
+      <p class="mt-1 text-xs text-stone-500">La distancia se confirma manualmente; estos valores se muestran como referencia para el cliente.</p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <label class="block text-xs text-stone-600 sm:col-span-2">Dirección de origen<input name="shipping_origin" required maxlength="300" value="{{ settings.get('shipping_origin', 'Pilar Centro, Pilar, Buenos Aires, Argentina') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"><span class="mt-1 block text-[10px] text-stone-400">Se usa para medir el recorrido hasta cada centro.</span></label>
         <label class="text-xs text-stone-600">Kilómetros incluidos<input name="shipping_free_km" type="number" min="0" max="500" step="0.1" required value="{{ settings.get('shipping_free_km', '10') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label>
         <label class="text-xs text-stone-600">Precio por km adicional (ARS)<input name="shipping_per_km" type="number" min="0" step="1" required value="{{ settings.get('shipping_per_km', '1000') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"></label>
+        <label class="block text-xs text-stone-600 sm:col-span-2">Mensaje para el cliente<textarea name="shipping_message" rows="2" maxlength="500" required class="mt-2 w-full border border-line px-4 py-3 text-sm">{{ settings.get('shipping_message', 'El envío se cobra a partir de {km_incluidos} km desde la ubicación de la máquina: {precio_km} por cada km adicional.') }}</textarea><span class="mt-1 block text-[10px] text-stone-400">Marcadores disponibles: {km_incluidos} y {precio_km}.</span></label>
         <label class="text-xs text-stone-600 sm:col-span-2">Precio de alquiler con operadora (ARS)<input name="operator_price" type="number" min="0" step="1" required value="{{ settings.get('operator_price', '0') }}" class="mt-2 w-full border border-line px-4 py-3 text-sm"><span class="mt-1 block text-[10px] text-stone-400">Con precio mayor a cero, aparece como opción en la reserva.</span></label>
       </div>
     </section>
